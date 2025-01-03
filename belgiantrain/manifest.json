@@ -1,0 +1,19 @@
+{
+    "domain": "belgiantrain",
+    "name": "SNCB/NMBS",
+    "version": "0.1.0",
+    "codeowners": [
+        "@tjorim"
+    ],
+    "config_flow": true,
+    "dependencies": [],
+    "documentation": "https://www.home-assistant.io/integrations/belgiantrain",
+    "homekit": {},
+    "iot_class": "cloud_polling",
+    "issue_tracker": "https://github.com/tjorim/belgiantrain/issues",
+    "requirements": [
+        "pyrail==0.1.0"
+    ],
+    "ssdp": [],
+    "zeroconf": []
+}

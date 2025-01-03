@@ -1,20 +1,14 @@
-# Notice
+# SNCB/NMBS
 
-The component and platforms in this repository are not meant to be used by a
-user, but as a "blueprint" that custom component developers can build
-upon, to make more awesome stuff.
-
-HAVE FUN! 😎
+belgiantrain is a custom integration for Home Assistant to get the next train departures from the iRail API.
 
 ## Why?
 
-This is simple, by having custom_components look (README + structure) the same
-it is easier for developers to help each other and for users to start using them.
-
-If you are a developer and you want to add things to this "blueprint" that you think more
-developers will have use for, please open a PR to add it :)
+I wanted to have a sensor that shows the next train departures from the station I use to go to work. I couldn't find an integration that does this, so I decided to create one myself. I also wanted to learn how to create a custom integration for Home Assistant. This is my first custom integration. I hope you like it. If you have any suggestions or improvements, please let me know. I'm happy to learn and improve.
 
 ## What?
+
+This integration will create a sensor for each station you want to monitor. The sensor will show the next train departures from the station. The sensor will update every minute. The sensor will show the next 5 departures. The sensor will show the destination, the departure time and the delay. The sensor will show the delay in minutes.
 
 This repository contains multiple files, here is a overview:
 
