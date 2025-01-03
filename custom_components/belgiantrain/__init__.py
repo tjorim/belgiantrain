@@ -18,7 +18,6 @@ type New_NameConfigEntry = ConfigEntry[MyApi]  # noqa: F821
 # TODO Update entry annotation
 async def async_setup_entry(hass: HomeAssistant, entry: New_NameConfigEntry) -> bool:
     """Set up SNCB/NMBS from a config entry."""
-
     # TODO 1. Create API instance
     # TODO 2. Validate the API connection (and authentication)
     # TODO 3. Store an API object for your platforms to access
