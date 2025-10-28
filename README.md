@@ -1,3 +1,5 @@
+DO NOT USE. NOT WORKING.
+
 # SNCB/NMBS
 
 belgiantrain is a custom integration for Home Assistant to get the next train departures from the iRail API.
