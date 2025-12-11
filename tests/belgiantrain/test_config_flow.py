@@ -3,7 +3,10 @@
 from unittest.mock import AsyncMock, patch
 
 from homeassistant import config_entries
-from homeassistant.components.belgiantrain.config_flow import CannotConnect, InvalidAuth
+from homeassistant.components.belgiantrain.config_flow import (
+    CannotConnectError,
+    InvalidAuthError,
+)
 from homeassistant.components.belgiantrain.const import DOMAIN
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
@@ -52,7 +55,7 @@ async def test_form_invalid_auth(
 
     with patch(
         "homeassistant.components.belgiantrain.config_flow.PlaceholderHub.authenticate",
-        side_effect=InvalidAuth,
+        side_effect=InvalidAuthError,
     ):
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
@@ -103,7 +106,7 @@ async def test_form_cannot_connect(
 
     with patch(
         "homeassistant.components.belgiantrain.config_flow.PlaceholderHub.authenticate",
-        side_effect=CannotConnect,
+        side_effect=CannotConnectError,
     ):
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
