@@ -15,7 +15,7 @@ from .coordinator import BelgianTrainDataUpdateCoordinator
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
-    from homeassistant.core import HomeAssistant, ServiceCall
+    from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse
     from homeassistant.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
@@ -39,6 +39,79 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:
         return False
     # Store stations in a dict to allow storing coordinators later
     hass.data[DOMAIN] = {"stations": station_response.stations, "coordinators": {}}
+
+    # Register services
+    async def async_get_disturbances(call: ServiceCall) -> ServiceResponse:
+        """Handle the get_disturbances service call."""
+        line_break_character = call.data.get("line_break_character")
+
+        api_client = iRail(session=async_get_clientsession(hass))
+        disturbances = await api_client.get_disturbances(
+            line_break_character=line_break_character
+        )
+
+        if disturbances is None:
+            return {"disturbances": []}
+
+        # Convert disturbances to dict format for response
+        disturbance_list = [
+            {
+                "id": disturbance.id,
+                "title": disturbance.title,
+                "description": disturbance.description,
+                "type": disturbance.type,
+                "timestamp": (
+                    disturbance.timestamp.isoformat() if disturbance.timestamp else None
+                ),
+            }
+            for disturbance in disturbances.disturbances
+        ]
+
+        return {"disturbances": disturbance_list}
+
+    async def async_get_vehicle(call: ServiceCall) -> ServiceResponse:
+        """Handle the get_vehicle service call."""
+        vehicle_id = call.data["vehicle_id"]
+        date = call.data.get("date")
+        alerts = call.data.get("alerts", False)
+
+        api_client = iRail(session=async_get_clientsession(hass))
+        vehicle = await api_client.get_vehicle(id=vehicle_id, date=date, alerts=alerts)
+
+        if vehicle is None:
+            return {"vehicle_id": vehicle_id, "error": "Vehicle not found or API error"}
+
+        # Convert vehicle info to dict format for response
+        stops = [
+            {
+                "station": stop.station,
+                "platform": stop.platform,
+                "time": stop.time.isoformat() if stop.time else None,
+                "delay": stop.delay,
+                "canceled": stop.canceled,
+            }
+            for stop in vehicle.stops
+        ]
+
+        return {
+            "vehicle_id": vehicle.vehicle,
+            "name": vehicle.name if hasattr(vehicle, "name") else None,
+            "stops": stops,
+        }
+
+    hass.services.async_register(
+        DOMAIN,
+        "get_disturbances",
+        async_get_disturbances,
+        supports_response=True,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        "get_vehicle",
+        async_get_vehicle,
+        supports_response=True,
+    )
 
     return True
 
@@ -76,22 +149,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data[DOMAIN]["coordinators"][entry.entry_id] = coordinator
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
-    # Register services
-    async def async_refresh_data(_call: ServiceCall) -> None:
-        """Handle the refresh_data service call."""
-        # Refresh all coordinators when service is called
-        for coordinator in hass.data[DOMAIN]["coordinators"].values():
-            await coordinator.async_request_refresh()
-
-    # Only register the service once for the domain
-    if not hass.services.has_service(DOMAIN, "refresh_data"):
-        hass.services.async_register(
-            DOMAIN,
-            "refresh_data",
-            async_refresh_data,
-        )
-
     return True
 
 
@@ -105,6 +162,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         # Unregister services if this is the last entry
         if not hass.data[DOMAIN]["coordinators"]:
-            hass.services.async_remove(DOMAIN, "refresh_data")
+            hass.services.async_remove(DOMAIN, "get_disturbances")
+            hass.services.async_remove(DOMAIN, "get_vehicle")
 
     return unload_ok

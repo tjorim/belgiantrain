@@ -97,18 +97,56 @@ Shows the next departure from a station.
 
 ## Services
 
-This integration provides the following service actions:
+This integration provides service actions to retrieve real-time information from the Belgian rail network.
 
-### `belgiantrain.refresh_data`
+### `belgiantrain.get_disturbances`
 
-Force a refresh of train data for all configured connections.
+Retrieve information about current disturbances on the Belgian rail network.
+
+**Parameters:**
+- `line_break_character` (optional): Custom character to use for line breaks in disturbance descriptions
 
 **Example:**
 ```yaml
-service: belgiantrain.refresh_data
+service: belgiantrain.get_disturbances
+data:
+  line_break_character: "<br>"
+response_variable: disturbances
 ```
 
-This service can be useful when you want to immediately update train information, for example in automations or scripts that need the most recent data.
+**Response:**
+Returns a list of current disturbances with:
+- `id`: Disturbance ID
+- `title`: Short description
+- `description`: Detailed description
+- `type`: Type of disturbance
+- `timestamp`: When the disturbance was reported
+
+### `belgiantrain.get_vehicle`
+
+Retrieve detailed information about a specific train vehicle.
+
+**Parameters:**
+- `vehicle_id` (required): Unique identifier of the train vehicle (e.g., "BE.NMBS.IC1832")
+- `date` (optional): Specific date for vehicle information (DDMMYY format). Defaults to current date
+- `alerts` (optional): Include service alerts for the vehicle (default: false)
+
+**Example:**
+```yaml
+service: belgiantrain.get_vehicle
+data:
+  vehicle_id: "BE.NMBS.IC1832"
+  alerts: true
+response_variable: vehicle_info
+```
+
+**Response:**
+Returns vehicle information with:
+- `vehicle_id`: Train vehicle ID
+- `name`: Train name
+- `stops`: List of stops with station, platform, time, delay, and cancellation status
+
+**Note:** For forcing entity updates, use the built-in Home Assistant service `homeassistant.update_entity` instead of a custom refresh service.
 
 ## Development
 

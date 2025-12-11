@@ -1,8 +1,39 @@
 # Describes the services offered by the SNCB/NMBS integration
-refresh_data:
-  name: Refresh data
-  description: Force refresh of train data for all configured connections.
-  target:
-    entity:
-      integration: belgiantrain
-      domain: sensor
+get_disturbances:
+  name: Get disturbances
+  description: Retrieve information about current disturbances on the Belgian rail network.
+  response:
+    optional: false
+  fields:
+    line_break_character:
+      name: Line break character
+      description: Custom character to use for line breaks in disturbance descriptions.
+      example: "<br>"
+      selector:
+        text:
+
+get_vehicle:
+  name: Get vehicle information
+  description: Retrieve detailed information about a specific train vehicle.
+  response:
+    optional: false
+  fields:
+    vehicle_id:
+      name: Vehicle ID
+      description: Unique identifier of the train vehicle (e.g., "BE.NMBS.IC1832").
+      required: true
+      example: "BE.NMBS.IC1832"
+      selector:
+        text:
+    date:
+      name: Date
+      description: Specific date for vehicle information (DDMMYY format). Defaults to current date.
+      example: "111224"
+      selector:
+        text:
+    alerts:
+      name: Include alerts
+      description: Include service alerts for the vehicle.
+      default: false
+      selector:
+        boolean:
