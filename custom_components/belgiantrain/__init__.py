@@ -157,18 +157,20 @@ async def _async_get_stations_handler(
 
     # Filter stations if name_filter provided
     if name_filter:
-        filtered_stations = [
-            {
-                "id": station.id,
-                "name": station.name,
-                "standard_name": station.standard_name,
-                "latitude": getattr(station, "latitude", None),
-                "longitude": getattr(station, "longitude", None),
-            }
-            for station in stations
-            if name_filter in station.name.lower()
-            or name_filter in station.standard_name.lower()
-        ]
+        filtered_stations = []
+        for station in stations:
+            name_lower = station.name.lower()
+            standard_name_lower = station.standard_name.lower()
+            if name_filter in name_lower or name_filter in standard_name_lower:
+                filtered_stations.append(
+                    {
+                        "id": station.id,
+                        "name": station.name,
+                        "standard_name": station.standard_name,
+                        "latitude": getattr(station, "latitude", None),
+                        "longitude": getattr(station, "longitude", None),
+                    }
+                )
     else:
         filtered_stations = [
             {

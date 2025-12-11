@@ -236,11 +236,11 @@ async def test_get_stations_service(hass: HomeAssistant) -> None:
     mock_station_2.latitude = "51.035"
     mock_station_2.longitude = "3.710"
 
+    mock_stations = [mock_station_1, mock_station_2]
+
     with patch("custom_components.belgiantrain.iRail") as mock_irail:
         mock_api = AsyncMock()
-        mock_api.get_stations.return_value = MagicMock(
-            stations=[mock_station_1, mock_station_2]
-        )
+        mock_api.get_stations.return_value = MagicMock(stations=mock_stations)
         mock_irail.return_value = mock_api
 
         # Set up the integration
@@ -258,7 +258,7 @@ async def test_get_stations_service(hass: HomeAssistant) -> None:
         # Verify response
         assert response is not None
         assert "stations" in response
-        expected_count = 2
+        expected_count = len(mock_stations)
         assert response["count"] == expected_count
         assert len(response["stations"]) == expected_count
 
