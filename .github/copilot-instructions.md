@@ -47,8 +47,8 @@ This repository contains a Home Assistant custom integration for Belgian trains 
 - Append `_excl_vias` to unique IDs when the exclude vias option is enabled to allow multiple configurations
 
 ### Unique ID Format
-- Connection sensors: `{from_station_id}_{to_station_id}` or `{from_station_id}_{to_station_id}_excl_vias`
-- Liveboard sensors: `{station_id}_liveboard` or `{station_id}_liveboard_excl_vias`
+- Connection sensors: `nmbs_connection_{from_station_id}_{to_station_id}` or `nmbs_connection_{from_station_id}_{to_station_id}_excl_vias`
+- Liveboard sensors: `nmbs_live_{station_id}_{from_station_id}_{to_station_id}` or `nmbs_live_{station_id}_{from_station_id}_{to_station_id}_excl_vias`
 
 ### Data Flow
 1. `__init__.py`: Sets up the integration and fetches station list from iRail API
