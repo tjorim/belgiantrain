@@ -1,8 +1,12 @@
 """Test the SNCB/NMBS sensor platform."""
 
+# ruff: noqa: ANN001, ANN201, ANN202, ARG001, FBT003, PLC0415, PLR2004
+
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from homeassistant.core import HomeAssistant
+from homeassistant.util import dt as dt_util
 
 from custom_components.belgiantrain.const import (
     CONF_EXCLUDE_VIAS,
@@ -18,10 +22,6 @@ from custom_components.belgiantrain.sensor import (
     get_ride_duration,
     get_time_until,
 )
-
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
 
 
 @pytest.fixture
@@ -79,9 +79,7 @@ async def test_sensor_setup(hass: HomeAssistant, mock_stations, mock_config_entr
         assert isinstance(entities[2], NMBSLiveBoard)
 
 
-async def test_sensor_setup_missing_station(
-    hass: HomeAssistant, mock_config_entry
-):
+async def test_sensor_setup_missing_station(hass: HomeAssistant, mock_config_entry):
     """Test sensor setup with missing station data."""
     # Don't populate hass.data[DOMAIN] to simulate missing stations
     hass.data[DOMAIN] = []
@@ -378,9 +376,7 @@ def test_get_ride_duration():
     assert duration == 32
 
 
-async def test_nmbs_sensor_connection_already_left(
-    hass: HomeAssistant, mock_stations
-):
+async def test_nmbs_sensor_connection_already_left(hass: HomeAssistant, mock_stations):
     """Test NMBSSensor when first connection has already left."""
     mock_api = AsyncMock()
 
