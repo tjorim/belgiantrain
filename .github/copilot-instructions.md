@@ -187,7 +187,7 @@ _LOGGER.debug("Debug message")
 
 ## Home Assistant Integration Standards
 
-- Follow Home Assistant quality scale requirements (see `custom_components/belgiantrain/quality_scale.yaml` and [Home Assistant Quality Scale documentation](https://developers.home-assistant.io/docs/integration_quality_scale/))
+- Follow Home Assistant quality scale requirements (see `custom_components/belgiantrain/quality_scale.yaml` and [Home Assistant Quality Scale documentation](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules))
 - Use Home Assistant's built-in helper functions
 - Implement proper config entry lifecycle (setup, unload)
 - Support multiple config entries for different station pairs
