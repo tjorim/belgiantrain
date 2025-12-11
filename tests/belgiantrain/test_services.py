@@ -1,5 +1,6 @@
 """Test the SNCB/NMBS service calls."""
 
+from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -7,9 +8,12 @@ from homeassistant.core import HomeAssistant
 
 from custom_components.belgiantrain.const import DOMAIN
 
+if TYPE_CHECKING:
+    from homeassistant.core import ServiceCall
+
 
 @pytest.fixture
-def mock_coordinators(hass: HomeAssistant):
+def mock_coordinators(hass: HomeAssistant) -> tuple[MagicMock, MagicMock]:
     """Create mock coordinators in hass.data."""
     # Initialize the domain data structure
     hass.data[DOMAIN] = {
@@ -29,7 +33,7 @@ def mock_coordinators(hass: HomeAssistant):
     hass.data[DOMAIN]["coordinators"]["entry_2"] = mock_coordinator_2
 
     # Register the service (simulating what async_setup_entry does)
-    async def async_refresh_data(_call):
+    async def async_refresh_data(_call: "ServiceCall") -> None:
         """Handle the refresh_data service call."""
         for coordinator in hass.data[DOMAIN]["coordinators"].values():
             await coordinator.async_request_refresh()
@@ -40,14 +44,15 @@ def mock_coordinators(hass: HomeAssistant):
 
 
 async def test_refresh_data_service_registered(
-    hass: HomeAssistant, mock_coordinators
+    hass: HomeAssistant, mock_coordinators: tuple[MagicMock, MagicMock]
 ) -> None:
     """Test that the refresh_data service is registered."""
+    _ = mock_coordinators  # Fixture is needed to set up the service
     assert hass.services.has_service(DOMAIN, "refresh_data")
 
 
 async def test_refresh_data_service_call(
-    hass: HomeAssistant, mock_coordinators
+    hass: HomeAssistant, mock_coordinators: tuple[MagicMock, MagicMock]
 ) -> None:
     """Test calling the refresh_data service."""
     mock_coordinator_1, mock_coordinator_2 = mock_coordinators

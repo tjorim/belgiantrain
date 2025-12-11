@@ -95,6 +95,21 @@ Shows the next departure from a station.
 - `delay`: Delay information (if applicable)
 - `delay_minutes`: Delay in minutes (if applicable)
 
+## Services
+
+This integration provides the following service actions:
+
+### `belgiantrain.refresh_data`
+
+Force a refresh of train data for all configured connections.
+
+**Example:**
+```yaml
+service: belgiantrain.refresh_data
+```
+
+This service can be useful when you want to immediately update train information, for example in automations or scripts that need the most recent data.
+
 ## Development
 
 This repository contains multiple files for development:
