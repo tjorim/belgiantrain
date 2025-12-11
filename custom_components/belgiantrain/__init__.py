@@ -31,6 +31,10 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:
     hass.data.setdefault(DOMAIN, {})
     station_response = await api_client.get_stations()
     if station_response is None:
+        _LOGGER.error(
+            "Failed to fetch stations from the iRail API. "
+            "The iRail API may be unavailable. Aborting integration setup."
+        )
         return False
     hass.data[DOMAIN] = station_response.stations
 
@@ -39,6 +43,12 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up SNCB/NMBS from a config entry."""
+    # Ensure station data exists and is a list before setting up platforms
+    stations = hass.data.get(DOMAIN)
+    if not isinstance(stations, list) or not stations:
+        _LOGGER.error("Station data is missing or invalid; cannot set up platforms.")
+        return False
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 

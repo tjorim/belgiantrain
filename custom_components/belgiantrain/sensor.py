@@ -17,15 +17,11 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.util import dt as dt_util
 from pyrail import iRail
 
-from .const import (  # noqa: F401
+from .const import (
     CONF_EXCLUDE_VIAS,
     CONF_STATION_FROM,
-    CONF_STATION_LIVE,
     CONF_STATION_TO,
-    DOMAIN,
-    PLATFORMS,
     find_station,
-    find_station_by_name,
 )
 
 if TYPE_CHECKING:
@@ -79,6 +75,14 @@ async def async_setup_entry(
 
     station_from = find_station(hass, config_entry.data[CONF_STATION_FROM])
     station_to = find_station(hass, config_entry.data[CONF_STATION_TO])
+
+    if station_from is None or station_to is None:
+        _LOGGER.error(
+            "Could not find station(s): from='%s', to='%s'. Aborting setup.",
+            config_entry.data.get(CONF_STATION_FROM),
+            config_entry.data.get(CONF_STATION_TO),
+        )
+        return
 
     # setup the connection from station to station
     # setup a disabled liveboard for both from and to station
@@ -182,9 +186,6 @@ class NMBSLiveBoard(SensorEntity):
             return
 
         _LOGGER.debug("API returned departures: %r", departures)
-        if len(departures) == 0:
-            # No trains are scheduled
-            return
         next_departure = departures[0]
 
         self._attrs = next_departure
@@ -327,7 +328,14 @@ class NMBSSensor(SensorEntity):
             return
 
         _LOGGER.debug("API returned connection: %r", connection)
-        if connection[0].departure.left:
+
+        # Ensure we have at least one connection
+        if len(connection) == 0:
+            _LOGGER.warning("No connections available")
+            return
+
+        # Check if first train has already left and we have a second option
+        if connection[0].departure.left and len(connection) > 1:
             next_connection = connection[1]
         else:
             next_connection = connection[0]

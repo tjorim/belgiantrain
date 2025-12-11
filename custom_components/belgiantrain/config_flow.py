@@ -68,30 +68,40 @@ class NMBSConfigFlow(ConfigFlow, domain=DOMAIN):
             if user_input[CONF_STATION_FROM] == user_input[CONF_STATION_TO]:
                 errors["base"] = "same_station"
             else:
-                [station_from] = [
-                    station
-                    for station in self.stations
-                    if station.id == user_input[CONF_STATION_FROM]
-                ]
-                [station_to] = [
-                    station
-                    for station in self.stations
-                    if station.id == user_input[CONF_STATION_TO]
-                ]
-                vias = "_excl_vias" if user_input.get(CONF_EXCLUDE_VIAS) else ""
-                await self.async_set_unique_id(
-                    f"{user_input[CONF_STATION_FROM]}_{user_input[CONF_STATION_TO]}{vias}"
+                station_from = next(
+                    (
+                        station
+                        for station in self.stations
+                        if station.id == user_input[CONF_STATION_FROM]
+                    ),
+                    None,
                 )
-                self._abort_if_unique_id_configured()
+                station_to = next(
+                    (
+                        station
+                        for station in self.stations
+                        if station.id == user_input[CONF_STATION_TO]
+                    ),
+                    None,
+                )
 
-                config_entry_name = (
-                    f"Train from {station_from.standard_name} "
-                    f"to {station_to.standard_name}"
-                )
-                return self.async_create_entry(
-                    title=config_entry_name,
-                    data=user_input,
-                )
+                if station_from is None or station_to is None:
+                    errors["base"] = "invalid_station"
+                else:
+                    vias = "_excl_vias" if user_input.get(CONF_EXCLUDE_VIAS) else ""
+                    await self.async_set_unique_id(
+                        f"{user_input[CONF_STATION_FROM]}_{user_input[CONF_STATION_TO]}{vias}"
+                    )
+                    self._abort_if_unique_id_configured()
+
+                    config_entry_name = (
+                        f"Train from {station_from.standard_name} "
+                        f"to {station_to.standard_name}"
+                    )
+                    return self.async_create_entry(
+                        title=config_entry_name,
+                        data=user_input,
+                    )
 
         schema = vol.Schema(
             {

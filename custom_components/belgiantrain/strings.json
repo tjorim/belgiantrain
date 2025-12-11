@@ -12,7 +12,8 @@
             }
         },
         "error": {
-            "same_station": "Departure and arrival stations must be different"
+            "same_station": "Departure and arrival stations must be different",
+            "invalid_station": "Invalid station selection. Please try again."
         },
         "abort": {
             "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
