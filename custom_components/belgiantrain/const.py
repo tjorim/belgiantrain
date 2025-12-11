@@ -23,15 +23,29 @@ def find_station_by_name(
     hass: "HomeAssistant", station_name: str
 ) -> "StationDetails | None":
     """Find given station_name in the station list."""
+    stations = hass.data.get(DOMAIN, {})
+    # Handle both old format (list) and new format (dict with 'stations' key)
+    if isinstance(stations, list):
+        station_list = stations
+    else:
+        station_list = stations.get("stations", [])
+
     return next(
-        (s for s in hass.data[DOMAIN] if station_name in (s.standard_name, s.name)),
+        (s for s in station_list if station_name in (s.standard_name, s.name)),
         None,
     )
 
 
 def find_station(hass: "HomeAssistant", station_id: str) -> "StationDetails | None":
     """Find station by exact station_id in the station list."""
+    stations = hass.data.get(DOMAIN, {})
+    # Handle both old format (list) and new format (dict with 'stations' key)
+    if isinstance(stations, list):
+        station_list = stations
+    else:
+        station_list = stations.get("stations", [])
+
     return next(
-        (s for s in hass.data[DOMAIN] if s.id == station_id),
+        (s for s in station_list if s.id == station_id),
         None,
     )
