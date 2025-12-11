@@ -44,10 +44,11 @@ def mock_coordinators(hass: HomeAssistant) -> tuple[MagicMock, MagicMock]:
 
 
 async def test_refresh_data_service_registered(
-    hass: HomeAssistant, mock_coordinators: tuple[MagicMock, MagicMock]
+    hass: HomeAssistant,
+    mock_coordinators: tuple[MagicMock, MagicMock],  # noqa: ARG001
 ) -> None:
     """Test that the refresh_data service is registered."""
-    _ = mock_coordinators  # Fixture is needed to set up the service
+    # mock_coordinators fixture sets up the service
     assert hass.services.has_service(DOMAIN, "refresh_data")
 
 

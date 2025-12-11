@@ -1,7 +1,7 @@
 # Describes the services offered by the SNCB/NMBS integration
 refresh_data:
   name: Refresh data
-  description: Force refresh of train data for a connection.
+  description: Force refresh of train data for all configured connections.
   target:
     entity:
       integration: belgiantrain
