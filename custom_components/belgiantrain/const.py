@@ -18,7 +18,7 @@ CONF_EXCLUDE_VIAS = "exclude_vias"
 CONF_SHOW_ON_MAP = "show_on_map"
 
 
-def find_station_by_name(hass: "HomeAssistant", station_name: str):
+def find_station_by_name(hass: "HomeAssistant", station_name: str) -> object | None:
     """Find given station_name in the station list."""
     return next(
         (s for s in hass.data[DOMAIN] if station_name in (s.standard_name, s.name)),
@@ -26,7 +26,7 @@ def find_station_by_name(hass: "HomeAssistant", station_name: str):
     )
 
 
-def find_station(hass: "HomeAssistant", station_name: str):
+def find_station(hass: "HomeAssistant", station_name: str) -> object | None:
     """Find given station_id in the station list."""
     return next(
         (s for s in hass.data[DOMAIN] if station_name in s.id),

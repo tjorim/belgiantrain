@@ -2,15 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 import logging
-from typing import Any
-
-from pyrail import iRail
-from pyrail.models import ConnectionDetails, LiveboardDeparture, StationDetails
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.sensor import SensorEntity
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_LATITUDE,
     ATTR_LONGITUDE,
@@ -18,10 +13,9 @@ from homeassistant.const import (
     CONF_SHOW_ON_MAP,
     UnitOfTime,
 )
-from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.util import dt as dt_util
+from pyrail import iRail
 
 from .const import (  # noqa: F401
     CONF_EXCLUDE_VIAS,
@@ -34,13 +28,21 @@ from .const import (  # noqa: F401
     find_station_by_name,
 )
 
+if TYPE_CHECKING:
+    from datetime import datetime
+
+    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.core import HomeAssistant
+    from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+    from pyrail.models import ConnectionDetails, LiveboardDeparture, StationDetails
+
 _LOGGER = logging.getLogger(__name__)
 
 DEFAULT_ICON = "mdi:train"
 DEFAULT_ICON_ALERT = "mdi:alert-octagon"
 
 
-def get_time_until(departure_time: datetime | None = None):
+def get_time_until(departure_time: datetime | None = None) -> int:
     """Calculate the time between now and a train's departure time."""
     if departure_time is None:
         return 0
@@ -49,15 +51,17 @@ def get_time_until(departure_time: datetime | None = None):
     return round(delta.total_seconds() / 60)
 
 
-def get_delay_in_minutes(delay=0):
+def get_delay_in_minutes(delay: int = 0) -> int:
     """Get the delay in minutes from a delay in seconds."""
     return round(int(delay) / 60)
 
 
-def get_ride_duration(departure_time: datetime, arrival_time: datetime, delay=0):
+def get_ride_duration(
+    departure_time: datetime, arrival_time: datetime, delay: int = 0
+) -> int:
     """Calculate the total travel time in minutes."""
     duration = arrival_time - departure_time
-    duration_time = int(round(duration.total_seconds() / 60))
+    duration_time = round(duration.total_seconds() / 60)
     return duration_time + get_delay_in_minutes(delay)
 
 
@@ -102,7 +106,7 @@ class NMBSLiveBoard(SensorEntity):
         live_station: StationDetails,
         station_from: StationDetails,
         station_to: StationDetails,
-        excl_vias: bool,
+        excl_vias: bool,  # noqa: FBT001
     ) -> None:
         """Initialize the sensor for getting liveboard data."""
         self._station = live_station
@@ -125,7 +129,6 @@ class NMBSLiveBoard(SensorEntity):
     @property
     def unique_id(self) -> str:
         """Return the unique ID."""
-
         unique_id = f"{self._station.id}_{self._station_from.id}_{self._station_to.id}"
         vias = "_excl_vias" if self._excl_vias else ""
         return f"nmbs_live_{unique_id}{vias}"
@@ -166,7 +169,7 @@ class NMBSLiveBoard(SensorEntity):
 
         return attrs
 
-    async def async_update(self, **kwargs: Any) -> None:
+    async def async_update(self, **_kwargs: Any) -> None:
         """Set the state equal to the next departure."""
         liveboard = await self._api_client.get_liveboard(self._station.id)
 
@@ -194,14 +197,14 @@ class NMBSSensor(SensorEntity):
     _attr_attribution = "https://api.irail.be/"
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         api_client: iRail,
         name: str,
-        show_on_map: bool,
+        show_on_map: bool,  # noqa: FBT001
         station_from: StationDetails,
         station_to: StationDetails,
-        excl_vias: bool,
+        excl_vias: bool,  # noqa: FBT001
     ) -> None:
         """Initialize the NMBS connection sensor."""
         self._name = name
@@ -226,7 +229,10 @@ class NMBSSensor(SensorEntity):
     def name(self) -> str:
         """Return the name of the sensor."""
         if self._name is None:
-            return f"Train from {self._station_from.standard_name} to {self._station_to.standard_name}"
+            return (
+                f"Train from {self._station_from.standard_name} "
+                f"to {self._station_to.standard_name}"
+            )
         return self._name
 
     @property
@@ -306,7 +312,7 @@ class NMBSSensor(SensorEntity):
 
         return self._attrs.vias is not None and len(self._attrs.vias) > 0
 
-    async def async_update(self, **kwargs: Any) -> None:
+    async def async_update(self, **_kwargs: Any) -> None:
         """Set the state to the duration of a connection."""
         connections = await self._api_client.get_connections(
             self._station_from.id, self._station_to.id

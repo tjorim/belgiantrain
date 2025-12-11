@@ -4,10 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from pyrail import iRail
-from pyrail.models import StationDetails
 import voluptuous as vol
-
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
@@ -17,6 +14,7 @@ from homeassistant.helpers.selector import (
     SelectSelectorConfig,
     SelectSelectorMode,
 )
+from pyrail import iRail
 
 from .const import (
     CONF_EXCLUDE_VIAS,
@@ -27,7 +25,7 @@ from .const import (
 )
 
 if TYPE_CHECKING:
-    pass
+    from pyrail.models import StationDetails
 
 
 class NMBSConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -42,12 +40,12 @@ class NMBSConfigFlow(ConfigFlow, domain=DOMAIN):
         api_client = iRail(session=async_get_clientsession(self.hass))
         stations_response = await api_client.get_stations()
         if stations_response is None:
-            raise CannotConnect("The API is currently unavailable.")
+            msg = "The API is currently unavailable."
+            raise CannotConnectError(msg)
         return stations_response.stations
 
     async def _fetch_stations_choices(self) -> list[SelectOptionDict]:
         """Fetch the stations options."""
-
         if len(self.stations) == 0:
             self.stations = await self._fetch_stations()
 
@@ -60,10 +58,9 @@ class NMBSConfigFlow(ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle the step to setup a connection between 2 stations."""
-
         try:
             choices = await self._fetch_stations_choices()
-        except CannotConnect:
+        except CannotConnectError:
             return self.async_abort(reason="api_unavailable")
 
         errors: dict = {}
@@ -87,7 +84,10 @@ class NMBSConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
                 self._abort_if_unique_id_configured()
 
-                config_entry_name = f"Train from {station_from.standard_name} to {station_to.standard_name}"
+                config_entry_name = (
+                    f"Train from {station_from.standard_name} "
+                    f"to {station_to.standard_name}"
+                )
                 return self.async_create_entry(
                     title=config_entry_name,
                     data=user_input,
@@ -118,5 +118,5 @@ class NMBSConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(Exception):
+class CannotConnectError(Exception):
     """Error to indicate we cannot connect to NMBS."""
