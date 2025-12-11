@@ -10,7 +10,8 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from pyrail import iRail
 
-from .const import DOMAIN
+from .const import CONF_STATION_FROM, CONF_STATION_TO, DOMAIN, find_station
+from .coordinator import BelgianTrainDataUpdateCoordinator
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -36,18 +37,43 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:
             "The iRail API may be unavailable. Aborting integration setup."
         )
         return False
-    hass.data[DOMAIN] = station_response.stations
+    # Store stations in a dict to allow storing coordinators later
+    hass.data[DOMAIN] = {"stations": station_response.stations, "coordinators": {}}
 
     return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up SNCB/NMBS from a config entry."""
-    # Ensure station data exists and is a list before setting up platforms
-    stations = hass.data.get(DOMAIN)
-    if not isinstance(stations, list) or not stations:
+    # Ensure station data exists before setting up platforms
+    domain_data = hass.data.get(DOMAIN)
+    if not isinstance(domain_data, dict) or "stations" not in domain_data:
         _LOGGER.error("Station data is missing or invalid; cannot set up platforms.")
         return False
+
+    # Get stations from config entry
+    station_from = find_station(hass, entry.data[CONF_STATION_FROM])
+    station_to = find_station(hass, entry.data[CONF_STATION_TO])
+
+    if station_from is None or station_to is None:
+        _LOGGER.error(
+            "Could not find station(s): from='%s', to='%s'. Aborting setup.",
+            entry.data.get(CONF_STATION_FROM),
+            entry.data.get(CONF_STATION_TO),
+        )
+        return False
+
+    # Create API client and coordinator
+    api_client = iRail(session=async_get_clientsession(hass))
+    coordinator = BelgianTrainDataUpdateCoordinator(
+        hass, api_client, station_from, station_to
+    )
+
+    # Fetch initial data
+    await coordinator.async_config_entry_first_refresh()
+
+    # Store coordinator
+    hass.data[DOMAIN]["coordinators"][entry.entry_id] = coordinator
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
@@ -55,4 +81,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+    if unload_ok:
+        # Remove coordinator from hass.data
+        hass.data[DOMAIN]["coordinators"].pop(entry.entry_id, None)
+
+    return unload_ok

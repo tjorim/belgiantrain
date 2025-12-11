@@ -13,14 +13,14 @@ from homeassistant.const import (
     CONF_SHOW_ON_MAP,
     UnitOfTime,
 )
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
-from pyrail import iRail
 
 from .const import (
     CONF_EXCLUDE_VIAS,
     CONF_STATION_FROM,
     CONF_STATION_TO,
+    DOMAIN,
     find_station,
 )
 
@@ -31,6 +31,8 @@ if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
     from pyrail.models import ConnectionDetails, LiveboardDeparture, StationDetails
+
+    from .coordinator import BelgianTrainDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -67,8 +69,6 @@ async def async_setup_entry(
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up NMBS sensor entities based on a config entry."""
-    api_client = iRail(session=async_get_clientsession(hass))
-
     name = config_entry.data.get(CONF_NAME, None)
     show_on_map = config_entry.data.get(CONF_SHOW_ON_MAP, False)
     excl_vias = config_entry.data.get(CONF_EXCLUDE_VIAS, False)
@@ -84,37 +84,49 @@ async def async_setup_entry(
         )
         return
 
+    # Get coordinator from hass.data
+    domain_data = hass.data.get(DOMAIN, {})
+    coordinators = domain_data.get("coordinators", {})
+    coordinator = coordinators.get(config_entry.entry_id)
+
+    if coordinator is None:
+        _LOGGER.error(
+            "No coordinator found for entry '%s'. Aborting sensor setup.",
+            config_entry.entry_id,
+        )
+        return
+
     # setup the connection from station to station
     # setup a disabled liveboard for both from and to station
     async_add_entities(
         [
             NMBSSensor(
-                api_client, name, show_on_map, station_from, station_to, excl_vias
+                coordinator, name, show_on_map, station_from, station_to, excl_vias
             ),
             NMBSLiveBoard(
-                api_client, station_from, station_from, station_to, excl_vias
+                coordinator, station_from, station_from, station_to, excl_vias
             ),
-            NMBSLiveBoard(api_client, station_to, station_from, station_to, excl_vias),
+            NMBSLiveBoard(coordinator, station_to, station_from, station_to, excl_vias),
         ]
     )
 
 
-class NMBSLiveBoard(SensorEntity):
+class NMBSLiveBoard(CoordinatorEntity[dict[str, Any]], SensorEntity):
     """Get the next train from a station's liveboard."""
 
     _attr_attribution = "https://api.irail.be/"
 
     def __init__(
         self,
-        api_client: iRail,
+        coordinator: BelgianTrainDataUpdateCoordinator,
         live_station: StationDetails,
         station_from: StationDetails,
         station_to: StationDetails,
         excl_vias: bool,  # noqa: FBT001
     ) -> None:
         """Initialize the sensor for getting liveboard data."""
+        super().__init__(coordinator)
         self._station = live_station
-        self._api_client = api_client
         self._station_from = station_from
         self._station_to = station_to
 
@@ -175,26 +187,44 @@ class NMBSLiveBoard(SensorEntity):
 
         return attrs
 
-    async def async_update(self, **_kwargs: Any) -> None:
-        """Set the state equal to the next departure."""
-        liveboard = await self._api_client.get_liveboard(self._station.id)
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        if self.coordinator.data is None:
+            _LOGGER.warning("Coordinator data not available")
+            self._state = None
+            self._attrs = None
+            self.async_write_ha_state()
+            return
+
+        # Determine which liveboard to use based on station
+        if self._station.id == self.coordinator.station_from.id:
+            liveboard = self.coordinator.data.get("liveboard_from")
+        else:
+            liveboard = self.coordinator.data.get("liveboard_to")
 
         if liveboard is None:
-            _LOGGER.warning("API failed in NMBSLiveBoard")
+            _LOGGER.warning("Liveboard data not available in coordinator")
+            self._state = None
+            self._attrs = None
+            self.async_write_ha_state()
             return
 
         if not (departures := liveboard.departures):
             _LOGGER.warning("API returned invalid departures: %r", liveboard)
+            self._state = None
+            self._attrs = None
+            self.async_write_ha_state()
             return
 
-        _LOGGER.debug("API returned departures: %r", departures)
+        _LOGGER.debug("Processing departures from coordinator: %r", departures)
         next_departure = departures[0]
 
         self._attrs = next_departure
         self._state = f"Track {next_departure.platform} - {next_departure.station}"
+        self.async_write_ha_state()
 
 
-class NMBSSensor(SensorEntity):
+class NMBSSensor(CoordinatorEntity[dict[str, Any]], SensorEntity):
     """Get the total travel time for a given connection."""
 
     _attr_attribution = "https://api.irail.be/"
@@ -202,7 +232,7 @@ class NMBSSensor(SensorEntity):
 
     def __init__(  # noqa: PLR0913
         self,
-        api_client: iRail,
+        coordinator: BelgianTrainDataUpdateCoordinator,
         name: str,
         show_on_map: bool,  # noqa: FBT001
         station_from: StationDetails,
@@ -210,9 +240,9 @@ class NMBSSensor(SensorEntity):
         excl_vias: bool,  # noqa: FBT001
     ) -> None:
         """Initialize the NMBS connection sensor."""
+        super().__init__(coordinator)
         self._name = name
         self._show_on_map = show_on_map
-        self._api_client = api_client
         self._station_from = station_from
         self._station_to = station_to
         self._excl_vias = excl_vias
@@ -315,25 +345,39 @@ class NMBSSensor(SensorEntity):
 
         return self._attrs.vias is not None and len(self._attrs.vias) > 0
 
-    async def async_update(self, **_kwargs: Any) -> None:
-        """Set the state to the duration of a connection."""
-        connections = await self._api_client.get_connections(
-            self._station_from.id, self._station_to.id
-        )
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        if self.coordinator.data is None:
+            _LOGGER.warning("Coordinator data not available")
+            self._state = None
+            self._attrs = None
+            self.async_write_ha_state()
+            return
+
+        connections = self.coordinator.data.get("connections")
 
         if connections is None:
-            _LOGGER.warning("API failed in NMBSSensor")
+            _LOGGER.warning("Connection data not available in coordinator")
+            self._state = None
+            self._attrs = None
+            self.async_write_ha_state()
             return
 
         if not (connection := connections.connections):
             _LOGGER.warning("API returned invalid connection: %r", connections)
+            self._state = None
+            self._attrs = None
+            self.async_write_ha_state()
             return
 
-        _LOGGER.debug("API returned connection: %r", connection)
+        _LOGGER.debug("Processing connection from coordinator: %r", connection)
 
         # Ensure we have at least one connection
         if len(connection) == 0:
             _LOGGER.warning("No connections available")
+            self._state = None
+            self._attrs = None
+            self.async_write_ha_state()
             return
 
         # Check if first train has already left and we have a second option
@@ -348,6 +392,7 @@ class NMBSSensor(SensorEntity):
             _LOGGER.debug(
                 "Skipping update of NMBSSensor because this connection is a via"
             )
+            self.async_write_ha_state()
             return
 
         duration = get_ride_duration(
@@ -357,3 +402,4 @@ class NMBSSensor(SensorEntity):
         )
 
         self._state = duration
+        self.async_write_ha_state()
