@@ -63,8 +63,6 @@ class BelgianTrainDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "liveboard_from": liveboard_from,
                 "liveboard_to": liveboard_to,
             }
-        except UpdateFailed:
-            raise
         except Exception as err:
             msg = f"Error communicating with iRail API: {err}"
             raise UpdateFailed(msg) from err
