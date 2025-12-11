@@ -23,7 +23,6 @@ from .const import (
     DOMAIN,
     find_station,
 )
-from .coordinator import BelgianTrainDataUpdateCoordinator
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -32,6 +31,8 @@ if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
     from pyrail.models import ConnectionDetails, LiveboardDeparture, StationDetails
+
+    from .coordinator import BelgianTrainDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -84,9 +85,16 @@ async def async_setup_entry(
         return
 
     # Get coordinator from hass.data
-    coordinator: BelgianTrainDataUpdateCoordinator = hass.data[DOMAIN]["coordinators"][
-        config_entry.entry_id
-    ]
+    domain_data = hass.data.get(DOMAIN, {})
+    coordinators = domain_data.get("coordinators", {})
+    coordinator = coordinators.get(config_entry.entry_id)
+
+    if coordinator is None:
+        _LOGGER.error(
+            "No coordinator found for entry '%s'. Aborting sensor setup.",
+            config_entry.entry_id,
+        )
+        return
 
     # setup the connection from station to station
     # setup a disabled liveboard for both from and to station
@@ -103,7 +111,7 @@ async def async_setup_entry(
     )
 
 
-class NMBSLiveBoard(CoordinatorEntity[BelgianTrainDataUpdateCoordinator], SensorEntity):
+class NMBSLiveBoard(CoordinatorEntity[dict[str, Any]], SensorEntity):
     """Get the next train from a station's liveboard."""
 
     _attr_attribution = "https://api.irail.be/"
@@ -185,6 +193,7 @@ class NMBSLiveBoard(CoordinatorEntity[BelgianTrainDataUpdateCoordinator], Sensor
             _LOGGER.warning("Coordinator data not available")
             self._state = None
             self._attrs = None
+            self.async_write_ha_state()
             return
 
         # Determine which liveboard to use based on station
@@ -197,12 +206,14 @@ class NMBSLiveBoard(CoordinatorEntity[BelgianTrainDataUpdateCoordinator], Sensor
             _LOGGER.warning("Liveboard data not available in coordinator")
             self._state = None
             self._attrs = None
+            self.async_write_ha_state()
             return
 
         if not (departures := liveboard.departures):
             _LOGGER.warning("API returned invalid departures: %r", liveboard)
             self._state = None
             self._attrs = None
+            self.async_write_ha_state()
             return
 
         _LOGGER.debug("Processing departures from coordinator: %r", departures)
@@ -210,9 +221,10 @@ class NMBSLiveBoard(CoordinatorEntity[BelgianTrainDataUpdateCoordinator], Sensor
 
         self._attrs = next_departure
         self._state = f"Track {next_departure.platform} - {next_departure.station}"
+        self.async_write_ha_state()
 
 
-class NMBSSensor(CoordinatorEntity[BelgianTrainDataUpdateCoordinator], SensorEntity):
+class NMBSSensor(CoordinatorEntity[dict[str, Any]], SensorEntity):
     """Get the total travel time for a given connection."""
 
     _attr_attribution = "https://api.irail.be/"
@@ -339,6 +351,7 @@ class NMBSSensor(CoordinatorEntity[BelgianTrainDataUpdateCoordinator], SensorEnt
             _LOGGER.warning("Coordinator data not available")
             self._state = None
             self._attrs = None
+            self.async_write_ha_state()
             return
 
         connections = self.coordinator.data.get("connections")
@@ -347,12 +360,14 @@ class NMBSSensor(CoordinatorEntity[BelgianTrainDataUpdateCoordinator], SensorEnt
             _LOGGER.warning("Connection data not available in coordinator")
             self._state = None
             self._attrs = None
+            self.async_write_ha_state()
             return
 
         if not (connection := connections.connections):
             _LOGGER.warning("API returned invalid connection: %r", connections)
             self._state = None
             self._attrs = None
+            self.async_write_ha_state()
             return
 
         _LOGGER.debug("Processing connection from coordinator: %r", connection)
@@ -362,6 +377,7 @@ class NMBSSensor(CoordinatorEntity[BelgianTrainDataUpdateCoordinator], SensorEnt
             _LOGGER.warning("No connections available")
             self._state = None
             self._attrs = None
+            self.async_write_ha_state()
             return
 
         # Check if first train has already left and we have a second option
@@ -376,6 +392,7 @@ class NMBSSensor(CoordinatorEntity[BelgianTrainDataUpdateCoordinator], SensorEnt
             _LOGGER.debug(
                 "Skipping update of NMBSSensor because this connection is a via"
             )
+            self.async_write_ha_state()
             return
 
         duration = get_ride_duration(
@@ -385,3 +402,4 @@ class NMBSSensor(CoordinatorEntity[BelgianTrainDataUpdateCoordinator], SensorEnt
         )
 
         self._state = duration
+        self.async_write_ha_state()
