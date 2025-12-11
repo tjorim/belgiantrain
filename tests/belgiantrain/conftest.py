@@ -1,18 +1,19 @@
 """Common fixtures for the SNCB/NMBS tests."""
 
 from collections.abc import Generator
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from pytest_homeassistant_custom_component.common import EnableCustomIntegrations
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
 
 @pytest.fixture(autouse=True)
-def auto_enable_custom_integrations(enable_custom_integrations: EnableCustomIntegrations) -> None:
+def auto_enable_custom_integrations(
+    enable_custom_integrations: Any,  # noqa: ARG001
+) -> None:
     """Enable custom integrations."""
     return
 

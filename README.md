@@ -100,7 +100,7 @@ Shows the next departure from a station.
 This repository contains multiple files for development:
 
 File | Purpose
--- | --
+--- | ---
 `custom_components/belgiantrain/` | Integration source code
 `tests/belgiantrain/` | Integration tests
 `scripts/` | Development scripts (setup, lint, develop)
