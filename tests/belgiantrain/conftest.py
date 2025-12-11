@@ -38,9 +38,7 @@ async def hass_with_station_data(hass: HomeAssistant):
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup and async_setup_entry."""
     with (
-        patch(
-            "custom_components.belgiantrain.async_setup", return_value=True
-        ) as mock_setup,
+        patch("custom_components.belgiantrain.async_setup", return_value=True),
         patch(
             "custom_components.belgiantrain.async_setup_entry", return_value=True
         ) as mock_setup_entry,
