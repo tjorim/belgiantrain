@@ -197,6 +197,8 @@ class NMBSLiveBoard(CoordinatorEntity[BelgianTrainDataUpdateCoordinator], Sensor
 
         if not (departures := liveboard.departures):
             _LOGGER.warning("API returned invalid departures: %r", liveboard)
+            self._state = None
+            self._attrs = None
             return
 
         _LOGGER.debug("Processing departures from coordinator: %r", departures)
