@@ -39,11 +39,7 @@ def find_station_by_name(
 def find_station(hass: "HomeAssistant", station_id: str) -> "StationDetails | None":
     """Find station by exact station_id in the station list."""
     stations = hass.data.get(DOMAIN, {})
-    # Handle both old format (list) and new format (dict with 'stations' key)
-    if isinstance(stations, list):
-        station_list = stations
-    else:
-        station_list = stations.get("stations", [])
+    station_list = stations.get("stations", [])
 
     return next(
         (s for s in station_list if s.id == station_id),
