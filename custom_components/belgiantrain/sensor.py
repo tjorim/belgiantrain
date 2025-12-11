@@ -183,6 +183,8 @@ class NMBSLiveBoard(CoordinatorEntity[BelgianTrainDataUpdateCoordinator], Sensor
         """Handle updated data from the coordinator."""
         if self.coordinator.data is None:
             _LOGGER.warning("Coordinator data not available")
+            self._state = None
+            self._attrs = None
             return
 
         # Determine which liveboard to use based on station
@@ -193,6 +195,8 @@ class NMBSLiveBoard(CoordinatorEntity[BelgianTrainDataUpdateCoordinator], Sensor
 
         if liveboard is None:
             _LOGGER.warning("Liveboard data not available in coordinator")
+            self._state = None
+            self._attrs = None
             return
 
         if not (departures := liveboard.departures):
@@ -333,12 +337,16 @@ class NMBSSensor(CoordinatorEntity[BelgianTrainDataUpdateCoordinator], SensorEnt
         """Handle updated data from the coordinator."""
         if self.coordinator.data is None:
             _LOGGER.warning("Coordinator data not available")
+            self._state = None
+            self._attrs = None
             return
 
         connections = self.coordinator.data.get("connections")
 
         if connections is None:
             _LOGGER.warning("Connection data not available in coordinator")
+            self._state = None
+            self._attrs = None
             return
 
         if not (connection := connections.connections):
