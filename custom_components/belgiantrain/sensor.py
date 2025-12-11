@@ -181,6 +181,10 @@ class NMBSLiveBoard(CoordinatorEntity[BelgianTrainDataUpdateCoordinator], Sensor
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
+        if self.coordinator.data is None:
+            _LOGGER.warning("Coordinator data not available")
+            return
+
         # Determine which liveboard to use based on station
         if self._station.id == self.coordinator.station_from.id:
             liveboard = self.coordinator.data.get("liveboard_from")
@@ -327,6 +331,10 @@ class NMBSSensor(CoordinatorEntity[BelgianTrainDataUpdateCoordinator], SensorEnt
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
+        if self.coordinator.data is None:
+            _LOGGER.warning("Coordinator data not available")
+            return
+
         connections = self.coordinator.data.get("connections")
 
         if connections is None:

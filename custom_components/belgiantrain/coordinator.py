@@ -54,6 +54,10 @@ class BelgianTrainDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 msg = "Failed to fetch connection data from iRail API"
                 raise UpdateFailed(msg)
 
+            if liveboard_from is None or liveboard_to is None:
+                msg = "Failed to fetch liveboard data from iRail API"
+                raise UpdateFailed(msg)
+
             return {
                 "connections": connections,
                 "liveboard_from": liveboard_from,
