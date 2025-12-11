@@ -6,7 +6,7 @@ This repository contains a Home Assistant custom integration for Belgian trains 
 
 **Purpose**: Home Assistant custom integration for monitoring Belgian train connections and liveboards
 **Technology Stack**: Python 3.12+, Home Assistant, pyrail library (iRail API wrapper)
-**Data Source**: iRail API (https://api.irail.be/)
+**Data Source**: [iRail API](https://api.irail.be/)
 
 ## Code Style and Standards
 
@@ -110,7 +110,7 @@ scripts/develop  # Start Home Assistant with the integration loaded
 ### Liveboard Sensors
 - Show next departures from a station
 - Disabled by default (`entity_registry_enabled_default = False`)
-- State: Destination station name
+- State: "Track {platform} - {station}" (e.g., "Track 3 - Brussels")
 - Attributes: departure time, platform, delay, vehicle ID, extra train indicator
 
 ## Configuration Options
@@ -187,7 +187,7 @@ _LOGGER.debug("Debug message")
 
 ## Home Assistant Integration Standards
 
-- Follow Home Assistant quality scale requirements (see `quality_scale.yaml`)
+- Follow Home Assistant quality scale requirements (see `custom_components/belgiantrain/quality_scale.yaml` and [Home Assistant Quality Scale documentation](https://developers.home-assistant.io/docs/integration_quality_scale/))
 - Use Home Assistant's built-in helper functions
 - Implement proper config entry lifecycle (setup, unload)
 - Support multiple config entries for different station pairs
@@ -202,7 +202,7 @@ _LOGGER.debug("Debug message")
 
 ## Maintenance
 
-- Keep dependencies up to date in `manifest.json` and `requirements.txt`
+- Keep dependencies up-to-date in `manifest.json` and `requirements.txt`
 - Monitor Home Assistant core changes that may affect integration
 - Update to latest pyrail library version when available
 - Test with latest Home Assistant releases
