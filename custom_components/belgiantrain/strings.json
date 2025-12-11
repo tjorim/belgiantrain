@@ -3,19 +3,21 @@
         "step": {
             "user": {
                 "data": {
-                    "host": "[%key:common::config_flow::data::host%]",
-                    "username": "[%key:common::config_flow::data::username%]",
-                    "password": "[%key:common::config_flow::data::password%]"
-                }
+                    "station_from": "Departure station",
+                    "station_to": "Arrival station",
+                    "exclude_vias": "Exclude via connections",
+                    "show_on_map": "Show on map"
+                },
+                "description": "Configure a train connection between two stations"
             }
         },
         "error": {
-            "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
-            "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
-            "unknown": "[%key:common::config_flow::error::unknown%]"
+            "same_station": "Departure and arrival stations must be different",
+            "invalid_station": "Invalid station selection. Please try again."
         },
         "abort": {
-            "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
+            "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
+            "api_unavailable": "The iRail API is currently unavailable. Please try again later."
         }
     }
 }

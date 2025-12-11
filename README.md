@@ -1,42 +1,142 @@
-DO NOT USE. NOT WORKING.
+# SNCB/NMBS Belgian Train Integration
 
-# SNCB/NMBS
+[![GitHub Release][releases-shield]][releases]
+[![License][license-shield]](LICENSE)
 
-belgiantrain is a custom integration for Home Assistant to get the next train departures from the iRail API.
+[![hacs][hacsbadge]][hacs]
 
-## Why?
+A Home Assistant custom integration for Belgian trains (SNCB/NMBS) with feature parity to the core Home Assistant NMBS integration.
 
-I wanted to have a sensor that shows the next train departures from the station I use to go to work. I couldn't find an integration that does this, so I decided to create one myself. I also wanted to learn how to create a custom integration for Home Assistant. This is my first custom integration. I hope you like it. If you have any suggestions or improvements, please let me know. I'm happy to learn and improve.
+## Features
 
-## What?
+This integration provides real-time train information from the iRail API (https://api.irail.be/):
 
-This integration will create a sensor for each station you want to monitor. The sensor will show the next train departures from the station. The sensor will update every minute. The sensor will show the next 5 departures. The sensor will show the destination, the departure time and the delay. The sensor will show the delay in minutes.
+- **Connection Sensors**: Monitor travel time between two stations, including:
+  - Real-time departure and arrival information
+  - Platform information for both departure and arrival
+  - Delay information in minutes
+  - Via connections with transfer details
+  - Cancellation status
+  - Vehicle ID
+  - Optional map display with station coordinates
 
-This repository contains multiple files, here is a overview:
+- **Liveboard Sensors**: View the next departures from any station (disabled by default):
+  - Next train departure time
+  - Destination station
+  - Platform information
+  - Delay information
+  - Vehicle ID
+  - Extra train indicator
 
-File | Purpose | Documentation
--- | -- | --
-`.devcontainer.json` | Used for development/testing with Visual Studio Code. | [Documentation](https://code.visualstudio.com/docs/remote/containers)
-`.github/ISSUE_TEMPLATE/*.yml` | Templates for the issue tracker | [Documentation](https://help.github.com/en/github/building-a-strong-community/configuring-issue-templates-for-your-repository)
-`custom_components/integration_blueprint/*` | Integration files, this is where everything happens. | [Documentation](https://developers.home-assistant.io/docs/creating_component_index)
-`CONTRIBUTING.md` | Guidelines on how to contribute. | [Documentation](https://help.github.com/en/github/building-a-strong-community/setting-guidelines-for-repository-contributors)
-`LICENSE` | The license file for the project. | [Documentation](https://help.github.com/en/github/creating-cloning-and-archiving-repositories/licensing-a-repository)
-`README.md` | The file you are reading now, should contain info about the integration, installation and configuration instructions. | [Documentation](https://help.github.com/en/github/writing-on-github/basic-writing-and-formatting-syntax)
-`requirements.txt` | Python packages used for development/lint/testing this integration. | [Documentation](https://pip.pypa.io/en/stable/user_guide/#requirements-files)
+## Installation
 
-## How?
+### HACS (Recommended)
 
-1. Create a new repository in GitHub, using this repository as a template by clicking the "Use this template" button in the GitHub UI.
-1. Open your new repository in Visual Studio Code devcontainer (Preferably with the "`Dev Containers: Clone Repository in Named Container Volume...`" option).
-1. Rename all instances of the `integration_blueprint` to `custom_components/<your_integration_domain>` (e.g. `custom_components/awesome_integration`).
-1. Rename all instances of the `Integration Blueprint` to `<Your Integration Name>` (e.g. `Awesome Integration`).
-1. Run the `scripts/develop` to start HA and test out your new integration.
+1. Open HACS in Home Assistant
+2. Go to "Integrations"
+3. Click the three dots in the top right corner
+4. Select "Custom repositories"
+5. Add this repository URL
+6. Select "Integration" as the category
+7. Click "Add"
+8. Search for "SNCB/NMBS" and install
 
-## Next steps
+### Manual Installation
 
-These are some next steps you may want to look into:
-- Add tests to your integration, [`pytest-homeassistant-custom-component`](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component) can help you get started.
-- Add brand images (logo/icon) to https://github.com/home-assistant/brands.
-- Create your first release.
-- Share your integration on the [Home Assistant Forum](https://community.home-assistant.io/).
-- Submit your integration to [HACS](https://hacs.xyz/docs/publish/start).
+1. Copy the `custom_components/belgiantrain` directory to your Home Assistant `custom_components` directory
+2. Restart Home Assistant
+
+## Configuration
+
+1. Go to Settings → Devices & Services
+2. Click "+ Add Integration"
+3. Search for "SNCB/NMBS"
+4. Select your departure station from the dropdown
+5. Select your arrival station from the dropdown
+6. (Optional) Enable "Exclude via connections" to only show direct trains
+7. (Optional) Enable "Show on map" to display station coordinates in sensor attributes
+
+The integration will create:
+- One main sensor showing the travel time in minutes between the two stations
+- Two liveboard sensors (disabled by default) for each station showing the next departure
+
+## Sensors
+
+### Connection Sensor
+Shows the total travel time in minutes between departure and arrival stations.
+
+**Attributes:**
+- `destination`: Destination station name
+- `direction`: Direction name
+- `platform_departing`: Departure platform
+- `platform_arriving`: Arrival platform
+- `vehicle_id`: Train vehicle ID
+- `departure`: Human-readable departure time ("In X minutes")
+- `departure_minutes`: Departure time in minutes
+- `delay`: Delay information ("X minutes")
+- `delay_minutes`: Delay in minutes
+- `canceled`: Boolean indicating if train is canceled
+- `via`: Via station name (if applicable)
+- `via_arrival_platform`: Via station arrival platform (if applicable)
+- `via_transfer_platform`: Via station departure platform (if applicable)
+- `via_transfer_time`: Transfer time at via station in minutes (if applicable)
+- `latitude`: Station latitude (if "Show on map" enabled)
+- `longitude`: Station longitude (if "Show on map" enabled)
+
+### Liveboard Sensors
+Shows the next departure from a station.
+
+**Attributes:**
+- `departure`: Human-readable departure time ("In X minutes")
+- `departure_minutes`: Departure time in minutes
+- `extra_train`: Boolean indicating if this is an extra train
+- `vehicle_id`: Train vehicle ID
+- `monitored_station`: The station being monitored
+- `delay`: Delay information (if applicable)
+- `delay_minutes`: Delay in minutes (if applicable)
+
+## Development
+
+This repository contains multiple files for development:
+
+File | Purpose
+--- | ---
+`custom_components/belgiantrain/` | Integration source code
+`tests/belgiantrain/` | Integration tests
+`scripts/` | Development scripts (setup, lint, develop)
+`requirements.txt` | Python packages for development/testing
+
+### Development Setup
+
+1. Clone the repository
+2. Run `scripts/setup` to install dependencies
+3. Run `scripts/lint` to check code quality
+4. Run `scripts/develop` to start Home Assistant for testing
+
+### Running Tests
+
+```bash
+pytest tests/belgiantrain/
+```
+
+## Data Source
+
+This integration uses the iRail API (https://api.irail.be/) which provides real-time Belgian train information from SNCB/NMBS.
+
+## Credits
+
+This integration achieves feature parity with the [core Home Assistant NMBS integration](https://github.com/home-assistant/core/tree/dev/homeassistant/components/nmbs).
+
+## Contributing
+
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+[releases-shield]: https://img.shields.io/github/release/tjorim/belgiantrain.svg?style=for-the-badge
+[releases]: https://github.com/tjorim/belgiantrain/releases
+[license-shield]: https://img.shields.io/github/license/tjorim/belgiantrain.svg?style=for-the-badge
+[hacs]: https://github.com/hacs/integration
+[hacsbadge]: https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge

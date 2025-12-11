@@ -12,7 +12,7 @@
     "iot_class": "cloud_polling",
     "issue_tracker": "https://github.com/tjorim/belgiantrain/issues",
     "requirements": [
-        "pyrail==0.1.0"
+        "pyrail==0.4.1"
     ],
     "ssdp": [],
     "zeroconf": []
