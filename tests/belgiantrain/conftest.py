@@ -1,24 +1,25 @@
 """Common fixtures for the SNCB/NMBS tests."""
 
 from collections.abc import Generator
-from unittest.mock import AsyncMock, patch
+from typing import TYPE_CHECKING
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from homeassistant.core import HomeAssistant
+if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
 
 
 @pytest.fixture(autouse=True)
-def auto_enable_custom_integrations(enable_custom_integrations):
+def auto_enable_custom_integrations(enable_custom_integrations) -> None:  # noqa: ANN001, ARG001
     """Enable custom integrations."""
-    yield
+    return
 
 
 @pytest.fixture
-async def hass_with_station_data(hass: HomeAssistant):
+async def hass_with_station_data(hass: "HomeAssistant") -> "HomeAssistant":
     """Provide a hass instance with station data preloaded."""
     # Mock the station data in hass.data
-    from unittest.mock import MagicMock
 
     mock_station_1 = MagicMock()
     mock_station_1.id = "BE.NMBS.008812005"

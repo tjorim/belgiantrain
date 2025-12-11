@@ -2,6 +2,10 @@
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from homeassistant import config_entries
+from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResultType
+
 from custom_components.belgiantrain.config_flow import CannotConnectError
 from custom_components.belgiantrain.const import (
     CONF_EXCLUDE_VIAS,
@@ -10,10 +14,6 @@ from custom_components.belgiantrain.const import (
     CONF_STATION_TO,
     DOMAIN,
 )
-
-from homeassistant import config_entries
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
 
 
 async def test_form(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
