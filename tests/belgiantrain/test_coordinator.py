@@ -1,6 +1,6 @@
 """Test the SNCB/NMBS coordinator."""
 
-# ruff: noqa: ANN001, ANN201, ANN202, ARG001
+# ruff: noqa: ANN001, ANN201
 
 from unittest.mock import AsyncMock, MagicMock
 
@@ -72,6 +72,9 @@ async def test_coordinator_update_success(
         mock_stations[0].id, mock_stations[1].id
     )
     assert mock_api_client.get_liveboard.call_count == 2
+    # Verify liveboard calls were made with correct station IDs in correct order
+    mock_api_client.get_liveboard.assert_any_call(mock_stations[0].id)
+    mock_api_client.get_liveboard.assert_any_call(mock_stations[1].id)
 
 
 async def test_coordinator_update_connection_failure(
@@ -105,6 +108,27 @@ async def test_coordinator_update_api_exception(
 
     # Update should raise UpdateFailed
     with pytest.raises(UpdateFailed, match="Error communicating with iRail API"):
+        await coordinator.async_refresh()
+
+
+async def test_coordinator_update_liveboard_failure(
+    hass: HomeAssistant, mock_api_client, mock_stations
+):
+    """Test coordinator when liveboard data is None but connections succeed."""
+    # Mock API to return valid connections but None for liveboard_from
+    mock_connections = MagicMock()
+    mock_connections.connections = []
+
+    mock_api_client.get_connections.return_value = mock_connections
+    mock_api_client.get_liveboard.side_effect = [None, MagicMock()]
+
+    # Create coordinator
+    coordinator = BelgianTrainDataUpdateCoordinator(
+        hass, mock_api_client, mock_stations[0], mock_stations[1]
+    )
+
+    # Update should raise UpdateFailed for liveboard data
+    with pytest.raises(UpdateFailed, match="Failed to fetch liveboard data"):
         await coordinator.async_refresh()
 
 

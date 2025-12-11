@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any
@@ -41,14 +42,14 @@ class BelgianTrainDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from API."""
         try:
-            # Fetch connection data
-            connections = await self.api_client.get_connections(
-                self.station_from.id, self.station_to.id
+            # Fetch all data concurrently for faster updates
+            connections, liveboard_from, liveboard_to = await asyncio.gather(
+                self.api_client.get_connections(
+                    self.station_from.id, self.station_to.id
+                ),
+                self.api_client.get_liveboard(self.station_from.id),
+                self.api_client.get_liveboard(self.station_to.id),
             )
-
-            # Fetch liveboard data for both stations
-            liveboard_from = await self.api_client.get_liveboard(self.station_from.id)
-            liveboard_to = await self.api_client.get_liveboard(self.station_to.id)
 
             if connections is None:
                 msg = "Failed to fetch train connections from iRail API"
@@ -63,6 +64,8 @@ class BelgianTrainDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "liveboard_from": liveboard_from,
                 "liveboard_to": liveboard_to,
             }
+        except UpdateFailed:
+            raise
         except Exception as err:
             msg = f"Error communicating with iRail API: {err}"
             raise UpdateFailed(msg) from err

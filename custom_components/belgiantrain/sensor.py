@@ -207,8 +207,6 @@ class NMBSLiveBoard(CoordinatorEntity[BelgianTrainDataUpdateCoordinator], Sensor
         self._attrs = next_departure
         self._state = f"Track {next_departure.platform} - {next_departure.station}"
 
-        super()._handle_coordinator_update()
-
 
 class NMBSSensor(CoordinatorEntity[BelgianTrainDataUpdateCoordinator], SensorEntity):
     """Get the total travel time for a given connection."""
@@ -345,6 +343,8 @@ class NMBSSensor(CoordinatorEntity[BelgianTrainDataUpdateCoordinator], SensorEnt
 
         if not (connection := connections.connections):
             _LOGGER.warning("API returned invalid connection: %r", connections)
+            self._state = None
+            self._attrs = None
             return
 
         _LOGGER.debug("Processing connection from coordinator: %r", connection)
@@ -352,6 +352,8 @@ class NMBSSensor(CoordinatorEntity[BelgianTrainDataUpdateCoordinator], SensorEnt
         # Ensure we have at least one connection
         if len(connection) == 0:
             _LOGGER.warning("No connections available")
+            self._state = None
+            self._attrs = None
             return
 
         # Check if first train has already left and we have a second option
@@ -375,4 +377,3 @@ class NMBSSensor(CoordinatorEntity[BelgianTrainDataUpdateCoordinator], SensorEnt
         )
 
         self._state = duration
-

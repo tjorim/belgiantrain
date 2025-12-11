@@ -24,11 +24,7 @@ def find_station_by_name(
 ) -> "StationDetails | None":
     """Find given station_name in the station list."""
     stations = hass.data.get(DOMAIN, {})
-    # Handle both old format (list) and new format (dict with 'stations' key)
-    if isinstance(stations, list):
-        station_list = stations
-    else:
-        station_list = stations.get("stations", [])
+    station_list = stations.get("stations", [])
 
     return next(
         (s for s in station_list if station_name in (s.standard_name, s.name)),
