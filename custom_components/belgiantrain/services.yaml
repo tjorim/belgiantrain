@@ -1,0 +1,8 @@
+# Describes the services offered by the SNCB/NMBS integration
+refresh_data:
+  name: Refresh data
+  description: Force refresh of train data for a connection.
+  target:
+    entity:
+      integration: belgiantrain
+      domain: sensor

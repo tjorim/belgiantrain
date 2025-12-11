@@ -15,7 +15,7 @@ from .coordinator import BelgianTrainDataUpdateCoordinator
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
-    from homeassistant.core import HomeAssistant
+    from homeassistant.core import HomeAssistant, ServiceCall
     from homeassistant.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
@@ -76,6 +76,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data[DOMAIN]["coordinators"][entry.entry_id] = coordinator
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    # Register services
+    async def async_refresh_data(_call: ServiceCall) -> None:
+        """Handle the refresh_data service call."""
+        # Refresh all coordinators when service is called
+        for coordinator in hass.data[DOMAIN]["coordinators"].values():
+            await coordinator.async_request_refresh()
+
+    # Only register the service once for the domain
+    if not hass.services.has_service(DOMAIN, "refresh_data"):
+        hass.services.async_register(
+            DOMAIN,
+            "refresh_data",
+            async_refresh_data,
+        )
+
     return True
 
 
@@ -86,5 +102,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unload_ok:
         # Remove coordinator from hass.data
         hass.data[DOMAIN]["coordinators"].pop(entry.entry_id, None)
+
+        # Unregister services if this is the last entry
+        if not hass.data[DOMAIN]["coordinators"]:
+            hass.services.async_remove(DOMAIN, "refresh_data")
 
     return unload_ok
