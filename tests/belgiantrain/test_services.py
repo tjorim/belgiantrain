@@ -1,17 +1,12 @@
 """Test the SNCB/NMBS service calls."""
 
-from datetime import datetime
-from typing import TYPE_CHECKING
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 from homeassistant.core import HomeAssistant
 
 from custom_components.belgiantrain import async_setup
 from custom_components.belgiantrain.const import DOMAIN
-
-if TYPE_CHECKING:
-    from homeassistant.core import ServiceCall
 
 
 async def test_get_disturbances_service(hass: HomeAssistant) -> None:
@@ -22,7 +17,7 @@ async def test_get_disturbances_service(hass: HomeAssistant) -> None:
     mock_disturbance.title = "Delay on line Brussels-Ghent"
     mock_disturbance.description = "Train delayed by 15 minutes"
     mock_disturbance.type = "delay"
-    mock_disturbance.timestamp = datetime(2024, 12, 11, 10, 30)
+    mock_disturbance.timestamp = datetime(2024, 12, 11, 10, 30, tzinfo=UTC)
 
     mock_disturbances = MagicMock()
     mock_disturbances.disturbances = [mock_disturbance]
@@ -86,7 +81,7 @@ async def test_get_vehicle_service(hass: HomeAssistant) -> None:
     mock_stop = MagicMock()
     mock_stop.station = "Brussels-Central"
     mock_stop.platform = "3"
-    mock_stop.time = datetime(2024, 12, 11, 10, 30)
+    mock_stop.time = datetime(2024, 12, 11, 10, 30, tzinfo=UTC)
     mock_stop.delay = 0
     mock_stop.canceled = False
 

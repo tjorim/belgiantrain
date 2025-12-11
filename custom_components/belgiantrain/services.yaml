@@ -27,7 +27,7 @@ get_vehicle:
         text:
     date:
       name: Date
-      description: Specific date for vehicle information (DDMMYY format). Defaults to current date.
+      description: Specific date for vehicle information in DDMMYY format (day, month, 2-digit year). For example, "111224" represents December 11, 2024. Defaults to current date if not specified.
       example: "111224"
       selector:
         text:

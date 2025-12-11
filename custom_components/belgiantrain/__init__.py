@@ -95,7 +95,7 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:
 
         return {
             "vehicle_id": vehicle.vehicle,
-            "name": vehicle.name if hasattr(vehicle, "name") else None,
+            "name": getattr(vehicle, "name", None),
             "stops": stops,
         }
 

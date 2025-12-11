@@ -128,7 +128,7 @@ Retrieve detailed information about a specific train vehicle.
 
 **Parameters:**
 - `vehicle_id` (required): Unique identifier of the train vehicle (e.g., "BE.NMBS.IC1832")
-- `date` (optional): Specific date for vehicle information (DDMMYY format). Defaults to current date
+- `date` (optional): Specific date for vehicle information in DDMMYY format (day, month, 2-digit year). For example, "111224" represents December 11, 2024. Defaults to current date if not specified.
 - `alerts` (optional): Include service alerts for the vehicle (default: false)
 
 **Example:**
