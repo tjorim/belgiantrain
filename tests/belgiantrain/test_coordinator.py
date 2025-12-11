@@ -71,7 +71,8 @@ async def test_coordinator_update_success(
     mock_api_client.get_connections.assert_called_once_with(
         mock_stations[0].id, mock_stations[1].id
     )
-    assert mock_api_client.get_liveboard.call_count == 2
+    expected_liveboard_calls = 2
+    assert mock_api_client.get_liveboard.call_count == expected_liveboard_calls
     # Verify liveboard calls were made with correct station IDs in correct order
     mock_api_client.get_liveboard.assert_any_call(mock_stations[0].id)
     mock_api_client.get_liveboard.assert_any_call(mock_stations[1].id)
