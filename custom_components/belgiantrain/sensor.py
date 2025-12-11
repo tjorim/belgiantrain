@@ -376,4 +376,3 @@ class NMBSSensor(CoordinatorEntity[BelgianTrainDataUpdateCoordinator], SensorEnt
 
         self._state = duration
 
-        super()._handle_coordinator_update()
