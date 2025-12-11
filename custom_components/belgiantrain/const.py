@@ -29,9 +29,9 @@ def find_station_by_name(
     )
 
 
-def find_station(hass: "HomeAssistant", station_name: str) -> "StationDetails | None":
-    """Find given station_id in the station list."""
+def find_station(hass: "HomeAssistant", station_id: str) -> "StationDetails | None":
+    """Find station by exact station_id in the station list."""
     return next(
-        (s for s in hass.data[DOMAIN] if station_name in s.id),
+        (s for s in hass.data[DOMAIN] if s.id == station_id),
         None,
     )

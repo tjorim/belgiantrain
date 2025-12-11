@@ -140,8 +140,10 @@ class NMBSLiveBoard(SensorEntity):
     @property
     def icon(self) -> str:
         """Return the default icon or an alert icon if delays."""
-        if self._attrs and int(self._attrs.delay) > 0:
-            return DEFAULT_ICON_ALERT
+        if self._attrs:
+            delay = getattr(self._attrs, "delay", 0)
+            if delay and int(delay) > 0:
+                return DEFAULT_ICON_ALERT
 
         return DEFAULT_ICON
 
