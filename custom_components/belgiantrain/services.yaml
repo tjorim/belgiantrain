@@ -37,3 +37,30 @@ get_vehicle:
       default: false
       selector:
         boolean:
+
+get_composition:
+  name: Get train composition
+  description: Retrieve composition details of a specific train (carriages, facilities, train length).
+  response:
+    optional: false
+  fields:
+    train_id:
+      name: Train ID
+      description: Unique identifier of the train (e.g., "S51507" or "IC1832").
+      required: true
+      example: "S51507"
+      selector:
+        text:
+
+get_stations:
+  name: Get stations
+  description: Retrieve list of all Belgian railway stations with their IDs and locations.
+  response:
+    optional: false
+  fields:
+    name_filter:
+      name: Name filter
+      description: Filter stations by name (case-insensitive partial match).
+      example: "Brussels"
+      selector:
+        text:

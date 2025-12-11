@@ -146,6 +146,53 @@ Returns vehicle information with:
 - `name`: Train name
 - `stops`: List of stops with station, platform, time, delay, and cancellation status
 
+### `belgiantrain.get_composition`
+
+Retrieve composition details of a specific train (carriages, facilities, train length).
+
+**Parameters:**
+- `train_id` (required): Unique identifier of the train (e.g., "S51507" or "IC1832")
+
+**Example:**
+```yaml
+service: belgiantrain.get_composition
+data:
+  train_id: "S51507"
+response_variable: composition
+```
+
+**Response:**
+Returns train composition with:
+- `train_id`: Train identifier
+- `segments`: List of train segments with:
+  - `origin`: Segment origin station
+  - `destination`: Segment destination station
+  - `units`: List of carriages with material type, toilet availability, bike section, and accessibility information
+
+**Use case:** Plan which carriage to board based on facilities (first class, bike storage, accessibility).
+
+### `belgiantrain.get_stations`
+
+Retrieve list of all Belgian railway stations with their IDs and locations.
+
+**Parameters:**
+- `name_filter` (optional): Filter stations by name (case-insensitive partial match)
+
+**Example:**
+```yaml
+service: belgiantrain.get_stations
+data:
+  name_filter: "Brussels"
+response_variable: stations
+```
+
+**Response:**
+Returns:
+- `stations`: List of stations with ID, name, standard name, latitude, and longitude
+- `count`: Number of stations returned
+
+**Use case:** Find station IDs for configuration or discover nearby stations.
+
 **Note:** For forcing entity updates, use the built-in Home Assistant service `homeassistant.update_entity` instead of a custom refresh service.
 
 ## Development

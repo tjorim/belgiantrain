@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from functools import partial
 from typing import TYPE_CHECKING
 
 from homeassistant.const import Platform
@@ -25,6 +26,164 @@ PLATFORMS = [Platform.SENSOR]
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 
+async def _async_get_disturbances_handler(
+    hass: HomeAssistant, call: ServiceCall
+) -> ServiceResponse:
+    """Handle the get_disturbances service call."""
+    line_break_character = call.data.get("line_break_character")
+
+    api_client = iRail(session=async_get_clientsession(hass))
+    disturbances = await api_client.get_disturbances(
+        line_break_character=line_break_character
+    )
+
+    if disturbances is None:
+        return {"disturbances": []}
+
+    # Convert disturbances to dict format for response
+    disturbance_list = [
+        {
+            "id": disturbance.id,
+            "title": disturbance.title,
+            "description": disturbance.description,
+            "type": disturbance.type,
+            "timestamp": (
+                disturbance.timestamp.isoformat() if disturbance.timestamp else None
+            ),
+        }
+        for disturbance in disturbances.disturbances
+    ]
+
+    return {"disturbances": disturbance_list}
+
+
+async def _async_get_vehicle_handler(
+    hass: HomeAssistant, call: ServiceCall
+) -> ServiceResponse:
+    """Handle the get_vehicle service call."""
+    vehicle_id = call.data["vehicle_id"]
+    date = call.data.get("date")
+    alerts = call.data.get("alerts", False)
+
+    api_client = iRail(session=async_get_clientsession(hass))
+    vehicle = await api_client.get_vehicle(id=vehicle_id, date=date, alerts=alerts)
+
+    if vehicle is None:
+        return {"vehicle_id": vehicle_id, "error": "Vehicle not found or API error"}
+
+    # Convert vehicle info to dict format for response
+    stops = [
+        {
+            "station": stop.station,
+            "platform": stop.platform,
+            "time": stop.time.isoformat() if stop.time else None,
+            "delay": stop.delay,
+            "canceled": stop.canceled,
+        }
+        for stop in vehicle.stops
+    ]
+
+    return {
+        "vehicle_id": vehicle.vehicle,
+        "name": getattr(vehicle, "name", None),
+        "stops": stops,
+    }
+
+
+async def _async_get_composition_handler(
+    hass: HomeAssistant, call: ServiceCall
+) -> ServiceResponse:
+    """Handle the get_composition service call."""
+    train_id = call.data["train_id"]
+
+    api_client = iRail(session=async_get_clientsession(hass))
+    composition = await api_client.get_composition(id=train_id)
+
+    if composition is None:
+        return {
+            "train_id": train_id,
+            "error": "Train composition not found or API error",
+        }
+
+    # Convert composition info to dict format for response
+    composition_data = {
+        "train_id": train_id,
+        "segments": [],
+    }
+
+    if hasattr(composition, "composition") and composition.composition:
+        # Build segments list from composition data
+        segments = []
+        if hasattr(composition.composition, "segments"):
+            for segment in composition.composition.segments:
+                segment_data = {
+                    "origin": getattr(segment, "origin", None),
+                    "destination": getattr(segment, "destination", None),
+                }
+
+                # Add composition units if available
+                if hasattr(segment, "composition") and segment.composition:
+                    units = []
+                    if hasattr(segment.composition, "units"):
+                        for unit in segment.composition.units:
+                            unit_data = {
+                                "material_type": getattr(unit, "material_type", None),
+                                "has_toilet": getattr(unit, "has_toilet", False),
+                                "has_bike_section": getattr(
+                                    unit, "has_bike_section", False
+                                ),
+                                "has_prmSection": getattr(
+                                    unit, "has_prmSection", False
+                                ),
+                            }
+                            units.append(unit_data)
+                    segment_data["units"] = units
+
+                segments.append(segment_data)
+
+        composition_data["segments"] = segments
+
+    return composition_data
+
+
+async def _async_get_stations_handler(
+    hass: HomeAssistant, call: ServiceCall
+) -> ServiceResponse:
+    """Handle the get_stations service call."""
+    name_filter = call.data.get("name_filter", "").lower()
+
+    # Use cached station data from hass.data
+    stations = hass.data[DOMAIN].get("stations", [])
+
+    # Filter stations if name_filter provided
+    if name_filter:
+        filtered_stations = [
+            {
+                "id": station.id,
+                "name": station.name,
+                "standard_name": station.standard_name,
+                "latitude": getattr(station, "latitude", None),
+                "longitude": getattr(station, "longitude", None),
+            }
+            for station in stations
+            if name_filter in station.name.lower()
+            or name_filter in station.standard_name.lower()
+        ]
+    else:
+        filtered_stations = [
+            {
+                "id": station.id,
+                "name": station.name,
+                "standard_name": station.standard_name,
+                "latitude": getattr(station, "latitude", None),
+                "longitude": getattr(station, "longitude", None),
+            }
+            for station in stations
+        ]
+
+    return {"stations": filtered_stations, "count": len(filtered_stations)}
+
+
 async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:
     """Set up the NMBS component."""
     api_client = iRail(session=async_get_clientsession(hass))
@@ -40,76 +199,32 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:
     # Store stations in a dict to allow storing coordinators later
     hass.data[DOMAIN] = {"stations": station_response.stations, "coordinators": {}}
 
-    # Register services
-    async def async_get_disturbances(call: ServiceCall) -> ServiceResponse:
-        """Handle the get_disturbances service call."""
-        line_break_character = call.data.get("line_break_character")
-
-        api_client = iRail(session=async_get_clientsession(hass))
-        disturbances = await api_client.get_disturbances(
-            line_break_character=line_break_character
-        )
-
-        if disturbances is None:
-            return {"disturbances": []}
-
-        # Convert disturbances to dict format for response
-        disturbance_list = [
-            {
-                "id": disturbance.id,
-                "title": disturbance.title,
-                "description": disturbance.description,
-                "type": disturbance.type,
-                "timestamp": (
-                    disturbance.timestamp.isoformat() if disturbance.timestamp else None
-                ),
-            }
-            for disturbance in disturbances.disturbances
-        ]
-
-        return {"disturbances": disturbance_list}
-
-    async def async_get_vehicle(call: ServiceCall) -> ServiceResponse:
-        """Handle the get_vehicle service call."""
-        vehicle_id = call.data["vehicle_id"]
-        date = call.data.get("date")
-        alerts = call.data.get("alerts", False)
-
-        api_client = iRail(session=async_get_clientsession(hass))
-        vehicle = await api_client.get_vehicle(id=vehicle_id, date=date, alerts=alerts)
-
-        if vehicle is None:
-            return {"vehicle_id": vehicle_id, "error": "Vehicle not found or API error"}
-
-        # Convert vehicle info to dict format for response
-        stops = [
-            {
-                "station": stop.station,
-                "platform": stop.platform,
-                "time": stop.time.isoformat() if stop.time else None,
-                "delay": stop.delay,
-                "canceled": stop.canceled,
-            }
-            for stop in vehicle.stops
-        ]
-
-        return {
-            "vehicle_id": vehicle.vehicle,
-            "name": getattr(vehicle, "name", None),
-            "stops": stops,
-        }
-
+    # Register services with partial to bind hass
     hass.services.async_register(
         DOMAIN,
         "get_disturbances",
-        async_get_disturbances,
+        partial(_async_get_disturbances_handler, hass),
         supports_response=True,
     )
 
     hass.services.async_register(
         DOMAIN,
         "get_vehicle",
-        async_get_vehicle,
+        partial(_async_get_vehicle_handler, hass),
+        supports_response=True,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        "get_composition",
+        partial(_async_get_composition_handler, hass),
+        supports_response=True,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        "get_stations",
+        partial(_async_get_stations_handler, hass),
         supports_response=True,
     )
 
@@ -164,5 +279,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if not hass.data[DOMAIN]["coordinators"]:
             hass.services.async_remove(DOMAIN, "get_disturbances")
             hass.services.async_remove(DOMAIN, "get_vehicle")
+            hass.services.async_remove(DOMAIN, "get_composition")
+            hass.services.async_remove(DOMAIN, "get_stations")
 
     return unload_ok
