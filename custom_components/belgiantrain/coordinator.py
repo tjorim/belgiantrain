@@ -51,7 +51,7 @@ class BelgianTrainDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             liveboard_to = await self.api_client.get_liveboard(self.station_to.id)
 
             if connections is None:
-                msg = "Failed to fetch connection data from iRail API"
+                msg = "Failed to fetch train connections from iRail API"
                 raise UpdateFailed(msg)
 
             if liveboard_from is None or liveboard_to is None:
