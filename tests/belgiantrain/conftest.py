@@ -5,13 +5,14 @@ from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from pytest_homeassistant_custom_component.common import EnableCustomIntegrations
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
 
 @pytest.fixture(autouse=True)
-def auto_enable_custom_integrations(enable_custom_integrations) -> None:  # noqa: ANN001, ARG001
+def auto_enable_custom_integrations(enable_custom_integrations: EnableCustomIntegrations) -> None:
     """Enable custom integrations."""
     return
 
