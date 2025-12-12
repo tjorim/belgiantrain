@@ -1,0 +1,66 @@
+# Describes the services offered by the SNCB/NMBS integration
+get_disturbances:
+  name: Get disturbances
+  description: Retrieve information about current disturbances on the Belgian rail network.
+  response:
+    optional: false
+  fields:
+    line_break_character:
+      name: Line break character
+      description: Custom character to use for line breaks in disturbance descriptions.
+      example: "<br>"
+      selector:
+        text:
+
+get_vehicle:
+  name: Get vehicle information
+  description: Retrieve detailed information about a specific train vehicle.
+  response:
+    optional: false
+  fields:
+    vehicle_id:
+      name: Vehicle ID
+      description: Unique identifier of the train vehicle (e.g., "BE.NMBS.IC1832").
+      required: true
+      example: "BE.NMBS.IC1832"
+      selector:
+        text:
+    date:
+      name: Date
+      description: Specific date for vehicle information in DDMMYY format (day, month, 2-digit year). For example, "111224" represents December 11, 2024. Defaults to current date if not specified.
+      example: "111224"
+      selector:
+        text:
+    alerts:
+      name: Include alerts
+      description: Include service alerts for the vehicle.
+      default: false
+      selector:
+        boolean:
+
+get_composition:
+  name: Get train composition
+  description: Retrieve composition details of a specific train (carriages, facilities, train length).
+  response:
+    optional: false
+  fields:
+    train_id:
+      name: Train ID
+      description: Unique identifier of the train (e.g., "S51507" or "IC1832").
+      required: true
+      example: "S51507"
+      selector:
+        text:
+
+get_stations:
+  name: Get stations
+  description: Retrieve list of all Belgian railway stations with their IDs and locations.
+  response:
+    optional: false
+  fields:
+    name_filter:
+      name: Name filter
+      description: Filter stations by name (case-insensitive partial match).
+      example: "Brussels"
+      selector:
+        text:

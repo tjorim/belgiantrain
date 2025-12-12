@@ -95,6 +95,106 @@ Shows the next departure from a station.
 - `delay`: Delay information (if applicable)
 - `delay_minutes`: Delay in minutes (if applicable)
 
+## Services
+
+This integration provides service actions to retrieve real-time information from the Belgian rail network.
+
+### `belgiantrain.get_disturbances`
+
+Retrieve information about current disturbances on the Belgian rail network.
+
+**Parameters:**
+- `line_break_character` (optional): Custom character to use for line breaks in disturbance descriptions
+
+**Example:**
+```yaml
+service: belgiantrain.get_disturbances
+data:
+  line_break_character: "<br>"
+response_variable: disturbances
+```
+
+**Response:**
+Returns a list of current disturbances with:
+- `id`: Disturbance ID
+- `title`: Short description
+- `description`: Detailed description
+- `type`: Type of disturbance
+- `timestamp`: When the disturbance was reported
+
+### `belgiantrain.get_vehicle`
+
+Retrieve detailed information about a specific train vehicle.
+
+**Parameters:**
+- `vehicle_id` (required): Unique identifier of the train vehicle (e.g., "BE.NMBS.IC1832")
+- `date` (optional): Specific date for vehicle information in DDMMYY format (day, month, 2-digit year). For example, "111224" represents December 11, 2024. Defaults to current date if not specified.
+- `alerts` (optional): Include service alerts for the vehicle (default: false)
+
+**Example:**
+```yaml
+service: belgiantrain.get_vehicle
+data:
+  vehicle_id: "BE.NMBS.IC1832"
+  alerts: true
+response_variable: vehicle_info
+```
+
+**Response:**
+Returns vehicle information with:
+- `vehicle_id`: Train vehicle ID
+- `name`: Train name
+- `stops`: List of stops with station, platform, time, delay, and cancellation status
+
+### `belgiantrain.get_composition`
+
+Retrieve composition details of a specific train (carriages, facilities, train length).
+
+**Parameters:**
+- `train_id` (required): Unique identifier of the train (e.g., "S51507" or "IC1832")
+
+**Example:**
+```yaml
+service: belgiantrain.get_composition
+data:
+  train_id: "S51507"
+response_variable: composition
+```
+
+**Response:**
+Returns train composition with:
+- `train_id`: Train identifier
+- `segments`: List of train segments with:
+  - `origin`: Segment origin station
+  - `destination`: Segment destination station
+  - `units`: List of carriages with material type, toilet availability, bike section, and accessibility information
+
+**Use case:** Plan which carriage to board based on facilities (first class, bike storage, accessibility).
+
+### `belgiantrain.get_stations`
+
+Retrieve list of all Belgian railway stations with their IDs and locations.
+
+**Parameters:**
+- `name_filter` (optional): Filter stations by name (case-insensitive partial match)
+
+**Example:**
+```yaml
+service: belgiantrain.get_stations
+data:
+  name_filter: "Brussels"
+response_variable: stations
+```
+
+**Response:**
+Returns:
+- `stations`: List of stations with ID, name, standard name, latitude, and longitude
+- `count`: Number of stations returned
+
+**Use case:** Find station IDs for configuration or discover nearby stations.
+
+**Note:** For forcing entity updates, use the built-in Home Assistant service `homeassistant.update_entity` instead of a custom refresh service.
+
 ## Development
 
 This repository contains multiple files for development:
