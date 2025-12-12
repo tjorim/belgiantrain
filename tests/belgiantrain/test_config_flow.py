@@ -154,8 +154,6 @@ async def test_form_same_station(
 
     assert result["type"] == FlowResultType.FORM
     assert result["errors"] == {"base": "same_station"}
-    assert result["title"] == "Train from Brussels-Central to Ghent-Sint-Pieters"
-    assert len(mock_setup_entry.mock_calls) == 1
 
 
 async def test_form_api_unavailable(hass: HomeAssistant) -> None:

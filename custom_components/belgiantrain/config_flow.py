@@ -91,9 +91,15 @@ class NMBSConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Handle adding a connection during initial setup."""
         if user_input is not None and not hasattr(self, "connection_data"):
-            # Store connection data and move to liveboard options
-            self.connection_data = user_input
-            return await self.async_step_connection_liveboards()
+            # Validate that departure and arrival stations are different
+            if user_input[CONF_STATION_FROM] == user_input[CONF_STATION_TO]:
+                errors = {"base": "same_station"}
+            else:
+                # Store connection data and move to liveboard options
+                self.connection_data = user_input
+                return await self.async_step_connection_liveboards()
+        else:
+            errors = {}
 
         # Fetch station choices
         try:
@@ -101,7 +107,6 @@ class NMBSConfigFlow(ConfigFlow, domain=DOMAIN):
         except CannotConnectError:
             return self.async_abort(reason="api_unavailable")
 
-        errors: dict = {}
         schema = vol.Schema(
             {
                 vol.Required(CONF_STATION_FROM): SelectSelector(

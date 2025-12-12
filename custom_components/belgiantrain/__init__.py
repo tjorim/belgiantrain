@@ -308,7 +308,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
 
                 # Create liveboard subentries if requested
                 if "liveboards_to_add" in entry.data:
-                    for station_id in entry.data["liveboards_to_add"]:
+                    # Use set to ensure unique station IDs
+                    unique_station_ids = set(entry.data["liveboards_to_add"])
+                    for station_id in unique_station_ids:
                         station = find_station(hass, station_id)
                         if station:
                             await hass.config_entries.async_add_subentry(

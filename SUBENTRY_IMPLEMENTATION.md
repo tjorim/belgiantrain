@@ -130,23 +130,32 @@ Added test cases for subentry flows:
 4. Disabled liveboard sensors were hard to discover
 
 ### After (Home Assistant 2025.2+)
-1. User creates a connection between Station A and Station B
-2. System creates:
-   - 1 connection sensor (enabled)
-   - **No liveboard sensors** (cleaner, simpler)
-3. User can add liveboard sensors for any station (including A, B, or C):
+1. During initial setup, user is guided through a menu to choose the sensor type:
+   - "Monitor travel time between two stations" (Connection)
+   - "Monitor departures from a station" (Liveboard)
+2. If "Connection" is selected:
+   - User selects departure and arrival stations
+   - User is offered checkboxes to optionally add liveboards for the departure and/or arrival stations
+   - System creates:
+     - 1 connection sensor (enabled)
+     - 1 or 2 liveboard sensors (enabled), if selected via checkboxes
+3. If "Liveboard" is selected:
+   - User selects a station
+   - System creates a liveboard sensor for that station (enabled)
+4. Additional liveboard sensors for any station (including A, B, or C) can be added later:
    - Go to the integration in Settings → Devices & Services
    - Click "Add Entry" (subentry option)
    - Select "Liveboard"
    - Choose any station from the dropdown
    - Click "Submit"
-4. Liveboard sensors are created enabled by default and are easy to manage
-5. Cleaner separation: connections monitor travel time, liveboards monitor departures
+5. Liveboard sensors are created enabled by default and are easy to manage
+6. Cleaner separation: connections monitor travel time, liveboards monitor departures
 
 ## Backward Compatibility
 
 - All existing functionality remains unchanged
-- Connection-based liveboards work exactly as before
+- **Legacy connection entries**: Continue to create disabled liveboard sensors for departure/arrival stations (backward compatible)
+- **New connection subentries**: Only create the connection sensor; liveboards added separately if desired
 - Subentry flows are optional - users don't need to use them
 - The implementation gracefully handles older Home Assistant versions without `ConfigSubentryFlow`
 
