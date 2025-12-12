@@ -93,20 +93,19 @@ async def test_form(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
     await hass.async_block_till_done()
 
     # Both checkboxes were selected, so we expect 2 liveboards
-    expected_liveboards = 2
+    expected_liveboard_count = 2
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["title"] == "SNCB/NMBS Belgian Trains"
     assert "first_connection" in result["data"]
     assert "liveboards_to_add" in result["data"]
-    assert len(result["data"]["liveboards_to_add"]) == expected_liveboards
+    assert len(result["data"]["liveboards_to_add"]) == expected_liveboard_count
     assert len(mock_setup_entry.mock_calls) == 1
 
 
 @pytest.mark.skip(reason="Connection subentry flow requires Home Assistant 2025.2+")
-async def test_form_same_station(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock
-) -> None:
+@pytest.mark.usefixtures("mock_setup_entry")
+async def test_form_same_station(hass: HomeAssistant) -> None:
     """Test we handle same station error in connection subentry."""
     # This test is for connection subentry flow which requires HA 2025.2+
     # Mock the station list
@@ -174,9 +173,8 @@ async def test_form_api_unavailable(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.skip(reason="ConfigSubentryFlow requires Home Assistant 2025.2+")
-async def test_subentry_liveboard_flow(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock
-) -> None:
+@pytest.mark.usefixtures("mock_setup_entry")
+async def test_subentry_liveboard_flow(hass: HomeAssistant) -> None:
     """Test subentry flow for adding a liveboard sensor."""
     # First create a main config entry
     mock_station_1 = MagicMock()
@@ -254,9 +252,8 @@ async def test_subentry_liveboard_flow(
 
 
 @pytest.mark.skip(reason="ConfigSubentryFlow requires Home Assistant 2025.2+")
-async def test_subentry_liveboard_already_configured(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock
-) -> None:
+@pytest.mark.usefixtures("mock_setup_entry")
+async def test_subentry_liveboard_already_configured(hass: HomeAssistant) -> None:
     """Test subentry flow aborts when liveboard is already configured."""
     # Note: This test is skipped because ConfigSubentryFlow requires HA 2025.2+
     # The logic below shows how the test should work when the feature is available
