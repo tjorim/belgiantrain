@@ -19,6 +19,14 @@
                     "show_on_map": "Show on map"
                 }
             },
+            "connection_liveboards": {
+                "title": "Add Liveboards?",
+                "description": "Also monitor departures from these stations?\n\nDeparture: {departure_station}\nArrival: {arrival_station}",
+                "data": {
+                    "add_departure_liveboard": "Monitor departures from {departure_station}",
+                    "add_arrival_liveboard": "Monitor departures from {arrival_station}"
+                }
+            },
             "liveboard": {
                 "title": "Add Liveboard",
                 "description": "Monitor departures from a station",

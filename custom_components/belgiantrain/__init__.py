@@ -264,7 +264,7 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:  # noqa
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  # noqa: PLR0911, PLR0915
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  # noqa: PLR0911, PLR0912, PLR0915
     """Set up SNCB/NMBS from a config entry."""
     # Ensure station data exists before setting up platforms
     domain_data = hass.data.get(DOMAIN)
@@ -305,6 +305,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                     unique_id=f"connection_{station_from_id}_{station_to_id}{vias}",
                     subentry_type=SUBENTRY_TYPE_CONNECTION,
                 )
+
+                # Create liveboard subentries if requested
+                if "liveboards_to_add" in entry.data:
+                    for station_id in entry.data["liveboards_to_add"]:
+                        station = find_station(hass, station_id)
+                        if station:
+                            await hass.config_entries.async_add_subentry(
+                                entry,
+                                title=f"Liveboard - {station.standard_name}",
+                                data={CONF_STATION_LIVE: station_id},
+                                unique_id=f"liveboard_{station_id}",
+                                subentry_type=SUBENTRY_TYPE_LIVEBOARD,
+                            )
 
         elif "first_liveboard" in entry.data:
             # Create a liveboard subentry from the initial setup

@@ -90,12 +90,10 @@ class NMBSConfigFlow(ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle adding a connection during initial setup."""
-        if user_input is not None:
-            # Create main entry and store connection data to be added as subentry
-            return self.async_create_entry(
-                title="SNCB/NMBS Belgian Trains",
-                data={"first_connection": user_input},
-            )
+        if user_input is not None and not hasattr(self, "connection_data"):
+            # Store connection data and move to liveboard options
+            self.connection_data = user_input
+            return await self.async_step_connection_liveboards()
 
         # Fetch station choices
         try:
@@ -127,6 +125,61 @@ class NMBSConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="connection",
             data_schema=schema,
             errors=errors,
+        )
+
+    async def async_step_connection_liveboards(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Ask if user wants to add liveboards for departure/arrival stations."""
+        if user_input is not None:
+            # Create main entry with connection and optional liveboards
+            data = {"first_connection": self.connection_data}
+
+            liveboards_to_add = []
+            if user_input.get("add_departure_liveboard", False):
+                liveboards_to_add.append(self.connection_data[CONF_STATION_FROM])
+            if user_input.get("add_arrival_liveboard", False):
+                liveboards_to_add.append(self.connection_data[CONF_STATION_TO])
+
+            if liveboards_to_add:
+                data["liveboards_to_add"] = liveboards_to_add
+
+            return self.async_create_entry(
+                title="SNCB/NMBS Belgian Trains",
+                data=data,
+            )
+
+        # Get station names for the checkboxes
+        from_id = self.connection_data[CONF_STATION_FROM]
+        to_id = self.connection_data[CONF_STATION_TO]
+        station_from = next((s for s in self.stations if s.id == from_id), None)
+        station_to = next((s for s in self.stations if s.id == to_id), None)
+
+        if not station_from or not station_to:
+            # Fallback if stations not found
+            return self.async_create_entry(
+                title="SNCB/NMBS Belgian Trains",
+                data={"first_connection": self.connection_data},
+            )
+
+        schema = vol.Schema(
+            {
+                vol.Optional(
+                    "add_departure_liveboard", default=False
+                ): BooleanSelector(),
+                vol.Optional(
+                    "add_arrival_liveboard", default=False
+                ): BooleanSelector(),
+            }
+        )
+
+        return self.async_show_form(
+            step_id="connection_liveboards",
+            data_schema=schema,
+            description_placeholders={
+                "departure_station": station_from.standard_name,
+                "arrival_station": station_to.standard_name,
+            },
         )
 
     async def async_step_liveboard(

@@ -79,9 +79,25 @@ async def test_form(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
         )
         await hass.async_block_till_done()
 
+    # Should show form asking about liveboards
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "connection_liveboards"
+
+    # Configure liveboards (add both)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            "add_departure_liveboard": True,
+            "add_arrival_liveboard": True,
+        },
+    )
+    await hass.async_block_till_done()
+
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["title"] == "SNCB/NMBS Belgian Trains"
     assert "first_connection" in result["data"]
+    assert "liveboards_to_add" in result["data"]
+    assert len(result["data"]["liveboards_to_add"]) == 2
     assert len(mock_setup_entry.mock_calls) == 1
 
 
