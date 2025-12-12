@@ -274,71 +274,78 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
 
     # Check if this is the main integration entry (no subentry type)
     if entry.subentry_type is None:
-        # Main integration entry - check for initial data to create first subentry
-        if "first_connection" in entry.data:
-            # Create a connection subentry from the initial setup
-            connection_data = entry.data["first_connection"]
-            if (
-                connection_data.get(CONF_STATION_FROM)
-                == connection_data.get(CONF_STATION_TO)
-            ):
-                _LOGGER.error("Cannot create connection with same station")
-                return False
+        # Check if this is a legacy connection entry (has CONF_STATION_FROM/TO directly)
+        # If so, skip this block and let it be handled by legacy support code below
+        is_legacy_connection = (
+            CONF_STATION_FROM in entry.data and CONF_STATION_TO in entry.data
+        )
 
-            # Create connection subentry
-            station_from_id = connection_data[CONF_STATION_FROM]
-            station_to_id = connection_data[CONF_STATION_TO]
-            excl_vias = connection_data.get(CONF_EXCLUDE_VIAS, False)
-            vias = "_excl_vias" if excl_vias else ""
+        if not is_legacy_connection:
+            # Main integration entry - check for initial data to create first subentry
+            if "first_connection" in entry.data:
+                # Create a connection subentry from the initial setup
+                connection_data = entry.data["first_connection"]
+                if (
+                    connection_data.get(CONF_STATION_FROM)
+                    == connection_data.get(CONF_STATION_TO)
+                ):
+                    _LOGGER.error("Cannot create connection with same station")
+                    return False
 
-            station_from = find_station(hass, station_from_id)
-            station_to = find_station(hass, station_to_id)
+                # Create connection subentry
+                station_from_id = connection_data[CONF_STATION_FROM]
+                station_to_id = connection_data[CONF_STATION_TO]
+                excl_vias = connection_data.get(CONF_EXCLUDE_VIAS, False)
+                vias = "_excl_vias" if excl_vias else ""
 
-            if station_from and station_to:
-                await hass.config_entries.async_add_subentry(
-                    entry,
-                    title=(
-                        f"Connection: {station_from.standard_name} → "
-                        f"{station_to.standard_name}"
-                    ),
-                    data=connection_data,
-                    unique_id=f"connection_{station_from_id}_{station_to_id}{vias}",
-                    subentry_type=SUBENTRY_TYPE_CONNECTION,
-                )
+                station_from = find_station(hass, station_from_id)
+                station_to = find_station(hass, station_to_id)
 
-                # Create liveboard subentries if requested
-                if "liveboards_to_add" in entry.data:
-                    # Use set to ensure unique station IDs
-                    unique_station_ids = set(entry.data["liveboards_to_add"])
-                    for station_id in unique_station_ids:
-                        station = find_station(hass, station_id)
-                        if station:
-                            await hass.config_entries.async_add_subentry(
-                                entry,
-                                title=f"Liveboard - {station.standard_name}",
-                                data={CONF_STATION_LIVE: station_id},
-                                unique_id=f"liveboard_{station_id}",
-                                subentry_type=SUBENTRY_TYPE_LIVEBOARD,
-                            )
+                if station_from and station_to:
+                    await hass.config_entries.async_add_subentry(
+                        entry,
+                        title=(
+                            f"Connection: {station_from.standard_name} → "
+                            f"{station_to.standard_name}"
+                        ),
+                        data=connection_data,
+                        unique_id=f"connection_{station_from_id}_{station_to_id}{vias}",
+                        subentry_type=SUBENTRY_TYPE_CONNECTION,
+                    )
 
-        elif "first_liveboard" in entry.data:
-            # Create a liveboard subentry from the initial setup
-            liveboard_data = entry.data["first_liveboard"]
-            station_id = liveboard_data[CONF_STATION_LIVE]
-            station = find_station(hass, station_id)
+                    # Create liveboard subentries if requested
+                    if "liveboards_to_add" in entry.data:
+                        # Use set to ensure unique station IDs
+                        unique_station_ids = set(entry.data["liveboards_to_add"])
+                        for station_id in unique_station_ids:
+                            station = find_station(hass, station_id)
+                            if station:
+                                await hass.config_entries.async_add_subentry(
+                                    entry,
+                                    title=f"Liveboard - {station.standard_name}",
+                                    data={CONF_STATION_LIVE: station_id},
+                                    unique_id=f"liveboard_{station_id}",
+                                    subentry_type=SUBENTRY_TYPE_LIVEBOARD,
+                                )
 
-            if station:
-                await hass.config_entries.async_add_subentry(
-                    entry,
-                    title=f"Liveboard - {station.standard_name}",
-                    data=liveboard_data,
-                    unique_id=f"liveboard_{station_id}",
-                    subentry_type=SUBENTRY_TYPE_LIVEBOARD,
-                )
+            elif "first_liveboard" in entry.data:
+                # Create a liveboard subentry from the initial setup
+                liveboard_data = entry.data["first_liveboard"]
+                station_id = liveboard_data[CONF_STATION_LIVE]
+                station = find_station(hass, station_id)
 
-        # Main entry enables subentries
-        _LOGGER.info("Main SNCB/NMBS integration entry set up successfully")
-        return True
+                if station:
+                    await hass.config_entries.async_add_subentry(
+                        entry,
+                        title=f"Liveboard - {station.standard_name}",
+                        data=liveboard_data,
+                        unique_id=f"liveboard_{station_id}",
+                        subentry_type=SUBENTRY_TYPE_LIVEBOARD,
+                    )
+
+            # Main entry enables subentries
+            _LOGGER.info("Main SNCB/NMBS integration entry set up successfully")
+            return True
 
     # Check if this is a subentry for a standalone liveboard
     if entry.subentry_type == SUBENTRY_TYPE_LIVEBOARD:
