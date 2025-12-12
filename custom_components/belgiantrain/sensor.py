@@ -114,19 +114,14 @@ async def async_setup_entry(
         )
         return
 
-    # setup the connection from station to station
-    # setup a disabled liveboard for both from and to station
-    async_add_entities(
-        [
-            NMBSSensor(
-                coordinator, name, show_on_map, station_from, station_to, excl_vias
-            ),
-            NMBSLiveBoard(
-                coordinator, station_from, station_from, station_to, excl_vias
-            ),
-            NMBSLiveBoard(coordinator, station_to, station_from, station_to, excl_vias),
-        ]
-    )
+    # setup the connection sensor
+    # Note: Liveboard sensors are no longer created here - users can add them
+    # as separate subentries if needed
+    async_add_entities([
+        NMBSSensor(
+            coordinator, name, show_on_map, station_from, station_to, excl_vias
+        ),
+    ])
 
 
 class NMBSLiveBoard(CoordinatorEntity[dict[str, Any]], SensorEntity):

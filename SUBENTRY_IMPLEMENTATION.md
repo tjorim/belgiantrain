@@ -70,13 +70,15 @@ Modified `async_setup_entry()` to handle both connection and liveboard subentrie
 Modified `async_setup_entry()` to:
 - Check if entry is a liveboard subentry
 - Create `StandaloneLiveboardSensor` for standalone liveboards
-- Maintain existing behavior for connection-based sensors
+- **Removed automatic creation of disabled liveboard sensors for connections**
+  - Connections now only create the connection sensor
+  - Users can add liveboard subentries separately if desired
 
 #### New Sensor Class
 Created `StandaloneLiveboardSensor` class:
 - Similar to existing `NMBSLiveBoard` but simpler
 - No dependency on connection stations
-- Enabled by default (unlike connection-based liveboards)
+- Enabled by default (unlike the old connection-based liveboards)
 - Unique ID format: `nmbs_liveboard_{station_id}`
 - Displays: "Track {platform} - {destination}"
 
@@ -125,16 +127,21 @@ Added test cases for subentry flows:
    - 1 connection sensor (enabled)
    - 2 liveboard sensors for A and B (disabled by default)
 3. To monitor Station C, user must create another connection involving C
+4. Disabled liveboard sensors were hard to discover
 
 ### After (Home Assistant 2025.2+)
-1. User can still create connections (same as before)
-2. Additionally, user can add standalone liveboards:
+1. User creates a connection between Station A and Station B
+2. System creates:
+   - 1 connection sensor (enabled)
+   - **No liveboard sensors** (cleaner, simpler)
+3. User can add liveboard sensors for any station (including A, B, or C):
    - Go to the integration in Settings → Devices & Services
    - Click "Add Entry" (subentry option)
    - Select "Liveboard"
    - Choose any station from the dropdown
    - Click "Submit"
-3. Standalone liveboard sensor is created and enabled by default
+4. Liveboard sensors are created enabled by default and are easy to manage
+5. Cleaner separation: connections monitor travel time, liveboards monitor departures
 
 ## Backward Compatibility
 

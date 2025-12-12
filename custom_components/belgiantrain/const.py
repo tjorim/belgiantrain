@@ -19,6 +19,7 @@ CONF_EXCLUDE_VIAS = "exclude_vias"
 CONF_SHOW_ON_MAP = "show_on_map"
 
 # Subentry types
+SUBENTRY_TYPE_CONNECTION: Final = "connection"
 SUBENTRY_TYPE_LIVEBOARD: Final = "liveboard"
 
 

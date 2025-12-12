@@ -59,10 +59,11 @@ This integration provides real-time train information from the iRail API (https:
 7. (Optional) Enable "Show on map" to display station coordinates in sensor attributes
 
 The integration will create:
-- One main sensor showing the travel time in minutes between the two stations
-- Two liveboard sensors (disabled by default) for each station showing the next departure
+- One sensor showing the travel time in minutes between the two stations
 
-### Adding Standalone Liveboard Sensors (Home Assistant 2025.2+)
+**Note**: Liveboard sensors are no longer automatically created with connections. Instead, add them separately as subentries (see below).
+
+### Adding Liveboard Sensors (Home Assistant 2025.2+)
 
 Starting with Home Assistant 2025.2, you can add standalone liveboard sensors for any station:
 
@@ -73,7 +74,7 @@ Starting with Home Assistant 2025.2, you can add standalone liveboard sensors fo
 5. Choose the station you want to monitor
 6. Click "Submit"
 
-This allows you to monitor departures from any station without having to configure a full connection between two stations.
+This allows you to monitor departures from any station, including the departure and arrival stations from your configured connections.
 
 ## Sensors
 
