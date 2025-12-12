@@ -38,7 +38,11 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:  # noqa
         )
         return False
     # Store stations in a dict to allow storing coordinators later
-    hass.data[DOMAIN] = {"stations": station_response.stations, "coordinators": {}}
+    hass.data[DOMAIN] = {
+        "stations": station_response.stations,
+        "coordinators": {},
+        "api_client": api_client,
+    }
 
     # Define service handlers as nested functions
     async def async_get_disturbances(call: ServiceCall) -> ServiceResponse:
@@ -46,7 +50,7 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:  # noqa
         line_break_character = call.data.get("line_break_character")
 
         try:
-            api_client = iRail(session=async_get_clientsession(hass))
+            api_client = hass.data[DOMAIN]["api_client"]
             disturbances = await api_client.get_disturbances(
                 line_break_character=line_break_character
             )
@@ -82,7 +86,7 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:  # noqa
         alerts = call.data.get("alerts", False)
 
         try:
-            api_client = iRail(session=async_get_clientsession(hass))
+            api_client = hass.data[DOMAIN]["api_client"]
             vehicle = await api_client.get_vehicle(
                 id=vehicle_id, date=date, alerts=alerts
             )
@@ -119,7 +123,7 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:  # noqa
         train_id = call.data["train_id"]
 
         try:
-            api_client = iRail(session=async_get_clientsession(hass))
+            api_client = hass.data[DOMAIN]["api_client"]
             composition = await api_client.get_composition(id=train_id)
 
             if composition is None:
