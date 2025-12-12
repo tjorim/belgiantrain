@@ -20,7 +20,9 @@ This integration provides real-time train information from the iRail API (https:
   - Vehicle ID
   - Optional map display with station coordinates
 
-- **Liveboard Sensors**: View the next departures from any station (disabled by default):
+- **Liveboard Sensors**: View the next departures from any station:
+  - **Connection-based liveboards**: Automatically created for departure and arrival stations (disabled by default)
+  - **Standalone liveboards**: Add liveboard sensors for any station independently (requires Home Assistant 2025.2+)
   - Next train departure time
   - Destination station
   - Platform information
@@ -59,6 +61,19 @@ This integration provides real-time train information from the iRail API (https:
 The integration will create:
 - One main sensor showing the travel time in minutes between the two stations
 - Two liveboard sensors (disabled by default) for each station showing the next departure
+
+### Adding Standalone Liveboard Sensors (Home Assistant 2025.2+)
+
+Starting with Home Assistant 2025.2, you can add standalone liveboard sensors for any station:
+
+1. Go to Settings → Devices & Services
+2. Find your SNCB/NMBS integration
+3. Click "Add Entry" (subentry)
+4. Select "Liveboard"
+5. Choose the station you want to monitor
+6. Click "Submit"
+
+This allows you to monitor departures from any station without having to configure a full connection between two stations.
 
 ## Sensors
 
