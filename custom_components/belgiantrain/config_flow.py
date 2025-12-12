@@ -46,16 +46,6 @@ class NMBSConfigFlow(ConfigFlow, domain=DOMAIN):
         """Initialize."""
         self.stations: list[StationDetails] = []
 
-    if ConfigSubentryFlow is not None:
-
-        @classmethod
-        @callback
-        def async_get_supported_subentry_types(
-            cls, _config_entry: ConfigEntry
-        ) -> dict[str, type[ConfigSubentryFlow]]:
-            """Return subentries supported by this handler."""
-            return {SUBENTRY_TYPE_LIVEBOARD: LiveboardFlowHandler}
-
     async def _fetch_stations(self) -> list[StationDetails]:
         """Fetch the stations."""
         api_client = iRail(session=async_get_clientsession(self.hass))
@@ -213,6 +203,20 @@ if ConfigSubentryFlow is not None:
                 data_schema=schema,
                 errors=errors,
             )
+
+    # Add the method to the class after LiveboardFlowHandler is defined
+    @classmethod
+    @callback
+    def _async_get_supported_subentry_types(
+        _cls: type[NMBSConfigFlow], _config_entry: ConfigEntry
+    ) -> dict[str, type[ConfigSubentryFlow]]:
+        """Return subentries supported by this handler."""
+        return {SUBENTRY_TYPE_LIVEBOARD: LiveboardFlowHandler}
+
+    # Dynamically add the method to NMBSConfigFlow
+    NMBSConfigFlow.async_get_supported_subentry_types = (
+        _async_get_supported_subentry_types  # type: ignore[method-assign]
+    )
 
 else:
     # Fallback class when ConfigSubentryFlow is not available
