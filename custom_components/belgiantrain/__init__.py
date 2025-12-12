@@ -285,9 +285,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
             if "first_connection" in entry.data:
                 # Create a connection subentry from the initial setup
                 connection_data = entry.data["first_connection"]
-                if (
-                    connection_data.get(CONF_STATION_FROM)
-                    == connection_data.get(CONF_STATION_TO)
+                if connection_data.get(CONF_STATION_FROM) == connection_data.get(
+                    CONF_STATION_TO
                 ):
                     _LOGGER.error("Cannot create connection with same station")
                     return False

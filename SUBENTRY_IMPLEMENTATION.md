@@ -59,10 +59,10 @@ Modified `async_setup_entry()` to handle both connection and liveboard subentrie
   - Retrieves station from config data
   - Creates `LiveboardDataUpdateCoordinator`
   - Sets up sensor platform
-- For connections (original behavior):
+- For legacy entries (no `subentry_type`): creates connection sensor and 2 disabled liveboard sensors (for backward compatibility)
+- For connection subentries (`subentry_type="connection"`): creates only the connection sensor; liveboard sensors must be added as separate subentries if desired
   - Retrieves both stations
   - Creates `BelgianTrainDataUpdateCoordinator`
-  - Sets up all sensors (connection + 2 liveboards)
 
 ### 5. Sensors (`sensor.py`)
 
@@ -70,9 +70,10 @@ Modified `async_setup_entry()` to handle both connection and liveboard subentrie
 Modified `async_setup_entry()` to:
 - Check if entry is a liveboard subentry
 - Create `StandaloneLiveboardSensor` for standalone liveboards
-- **Removed automatic creation of disabled liveboard sensors for connections**
-  - Connections now only create the connection sensor
-  - Users can add liveboard subentries separately if desired
+- **Liveboard sensor creation for connections is now conditional:**
+  - **New connection subentries** (with `subentry_type="connection"`) only create the connection sensor (no liveboards).
+  - **Legacy connections** (entries without `subentry_type`) still create the connection sensor *and* two disabled liveboard sensors for backward compatibility (see `sensor.py` lines 136-146).
+  - Users can add standalone liveboard subentries separately if desired.
 
 #### New Sensor Class
 Created `StandaloneLiveboardSensor` class:

@@ -172,9 +172,7 @@ class NMBSConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Optional(
                     "add_departure_liveboard", default=False
                 ): BooleanSelector(),
-                vol.Optional(
-                    "add_arrival_liveboard", default=False
-                ): BooleanSelector(),
+                vol.Optional("add_arrival_liveboard", default=False): BooleanSelector(),
             }
         )
 
@@ -269,9 +267,7 @@ if ConfigSubentryFlow is not None:
                         for entry in self.hass.config_entries.async_entries(DOMAIN):
                             for subentry in entry.subentries.values():
                                 if subentry.unique_id == unique_id:
-                                    return self.async_abort(
-                                        reason="already_configured"
-                                    )
+                                    return self.async_abort(reason="already_configured")
 
                         return self.async_create_entry(
                             title=(

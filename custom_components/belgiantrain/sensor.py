@@ -75,11 +75,8 @@ async def async_setup_entry(
 ) -> None:
     """Set up NMBS sensor entities based on a config entry."""
     # Skip setup for main integration entry (has initial setup data but no coordinator)
-    if (
-        config_entry.subentry_type is None
-        and set(config_entry.data.keys()).issubset(
-            {"first_connection", "first_liveboard", "liveboards_to_add"}
-        )
+    if config_entry.subentry_type is None and set(config_entry.data.keys()).issubset(
+        {"first_connection", "first_liveboard", "liveboards_to_add"}
     ):
         return
 
@@ -128,22 +125,22 @@ async def async_setup_entry(
 
     # setup the connection sensor and liveboards
     entities = [
-        NMBSSensor(
-            coordinator, name, show_on_map, station_from, station_to, excl_vias
-        ),
+        NMBSSensor(coordinator, name, show_on_map, station_from, station_to, excl_vias),
     ]
 
     # For legacy entries (no subentry_type), also create disabled liveboards
     # to maintain backward compatibility
     if config_entry.subentry_type is None:
-        entities.extend([
-            NMBSLiveBoard(
-                coordinator, station_from, station_from, station_to, excl_vias
-            ),
-            NMBSLiveBoard(
-                coordinator, station_to, station_from, station_to, excl_vias
-            ),
-        ])
+        entities.extend(
+            [
+                NMBSLiveBoard(
+                    coordinator, station_from, station_from, station_to, excl_vias
+                ),
+                NMBSLiveBoard(
+                    coordinator, station_to, station_from, station_to, excl_vias
+                ),
+            ]
+        )
 
     async_add_entities(entities)
 
