@@ -305,3 +305,112 @@ async def test_get_stations_service_with_filter(hass: HomeAssistant) -> None:
         assert response["count"] == 1
         assert len(response["stations"]) == 1
         assert response["stations"][0]["name"] == "Brussels-Central"
+
+
+async def test_get_disturbances_service_exception(hass: HomeAssistant) -> None:
+    """Test the get_disturbances service when API raises an exception."""
+    with patch("custom_components.belgiantrain.iRail") as mock_irail:
+        mock_api = AsyncMock()
+        mock_api.get_stations.return_value = MagicMock(stations=[])
+        mock_api.get_disturbances.side_effect = Exception("Network error")
+        mock_irail.return_value = mock_api
+
+        # Set up the integration
+        assert await async_setup(hass, {})
+
+        # Call the service
+        response = await hass.services.async_call(
+            DOMAIN,
+            "get_disturbances",
+            {},
+            blocking=True,
+            return_response=True,
+        )
+
+        # Verify response contains error
+        assert response is not None
+        assert "error" in response
+        assert "Network error" in response["error"]
+        assert response["disturbances"] == []
+
+
+async def test_get_vehicle_service_exception(hass: HomeAssistant) -> None:
+    """Test the get_vehicle service when API raises an exception."""
+    with patch("custom_components.belgiantrain.iRail") as mock_irail:
+        mock_api = AsyncMock()
+        mock_api.get_stations.return_value = MagicMock(stations=[])
+        mock_api.get_vehicle.side_effect = Exception("Timeout error")
+        mock_irail.return_value = mock_api
+
+        # Set up the integration
+        assert await async_setup(hass, {})
+
+        # Call the service
+        response = await hass.services.async_call(
+            DOMAIN,
+            "get_vehicle",
+            {"vehicle_id": "BE.NMBS.IC1832"},
+            blocking=True,
+            return_response=True,
+        )
+
+        # Verify response contains error
+        assert response is not None
+        assert "error" in response
+        assert "Timeout error" in response["error"]
+        assert response["vehicle_id"] == "BE.NMBS.IC1832"
+
+
+async def test_get_composition_service_exception(hass: HomeAssistant) -> None:
+    """Test the get_composition service when API raises an exception."""
+    with patch("custom_components.belgiantrain.iRail") as mock_irail:
+        mock_api = AsyncMock()
+        mock_api.get_stations.return_value = MagicMock(stations=[])
+        mock_api.get_composition.side_effect = Exception("API unavailable")
+        mock_irail.return_value = mock_api
+
+        # Set up the integration
+        assert await async_setup(hass, {})
+
+        # Call the service
+        response = await hass.services.async_call(
+            DOMAIN,
+            "get_composition",
+            {"train_id": "S51507"},
+            blocking=True,
+            return_response=True,
+        )
+
+        # Verify response contains error
+        assert response is not None
+        assert "error" in response
+        assert "API unavailable" in response["error"]
+        assert response["train_id"] == "S51507"
+
+
+async def test_get_stations_service_exception(hass: HomeAssistant) -> None:
+    """Test the get_stations service when an exception occurs."""
+    with patch("custom_components.belgiantrain.iRail") as mock_irail:
+        mock_api = AsyncMock()
+        mock_api.get_stations.return_value = MagicMock(stations=[])
+        mock_irail.return_value = mock_api
+
+        # Set up the integration
+        assert await async_setup(hass, {})
+
+        # Corrupt the data to cause an exception
+        hass.data[DOMAIN]["stations"] = None
+
+        # Call the service
+        response = await hass.services.async_call(
+            DOMAIN,
+            "get_stations",
+            {},
+            blocking=True,
+            return_response=True,
+        )
+
+        # Verify response contains error
+        assert response is not None
+        assert "error" in response
+        assert response["count"] == 0
