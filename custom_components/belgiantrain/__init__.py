@@ -11,6 +11,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from pyrail import iRail
 
 from .const import (
+    CONF_EXCLUDE_VIAS,
     CONF_STATION_FROM,
     CONF_STATION_LIVE,
     CONF_STATION_TO,
@@ -263,7 +264,7 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:  # noqa
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  # noqa: PLR0911
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  # noqa: PLR0911, PLR0915
     """Set up SNCB/NMBS from a config entry."""
     # Ensure station data exists before setting up platforms
     domain_data = hass.data.get(DOMAIN)
@@ -273,7 +274,54 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
 
     # Check if this is the main integration entry (no subentry type)
     if entry.subentry_type is None:
-        # Main integration entry - no sensors, just enables subentries
+        # Main integration entry - check for initial data to create first subentry
+        if "first_connection" in entry.data:
+            # Create a connection subentry from the initial setup
+            connection_data = entry.data["first_connection"]
+            if (
+                connection_data.get(CONF_STATION_FROM)
+                == connection_data.get(CONF_STATION_TO)
+            ):
+                _LOGGER.error("Cannot create connection with same station")
+                return False
+
+            # Create connection subentry
+            station_from_id = connection_data[CONF_STATION_FROM]
+            station_to_id = connection_data[CONF_STATION_TO]
+            excl_vias = connection_data.get(CONF_EXCLUDE_VIAS, False)
+            vias = "_excl_vias" if excl_vias else ""
+
+            station_from = find_station(hass, station_from_id)
+            station_to = find_station(hass, station_to_id)
+
+            if station_from and station_to:
+                await hass.config_entries.async_add_subentry(
+                    entry,
+                    title=(
+                        f"Connection: {station_from.standard_name} → "
+                        f"{station_to.standard_name}"
+                    ),
+                    data=connection_data,
+                    unique_id=f"connection_{station_from_id}_{station_to_id}{vias}",
+                    subentry_type=SUBENTRY_TYPE_CONNECTION,
+                )
+
+        elif "first_liveboard" in entry.data:
+            # Create a liveboard subentry from the initial setup
+            liveboard_data = entry.data["first_liveboard"]
+            station_id = liveboard_data[CONF_STATION_LIVE]
+            station = find_station(hass, station_id)
+
+            if station:
+                await hass.config_entries.async_add_subentry(
+                    entry,
+                    title=f"Liveboard - {station.standard_name}",
+                    data=liveboard_data,
+                    unique_id=f"liveboard_{station_id}",
+                    subentry_type=SUBENTRY_TYPE_LIVEBOARD,
+                )
+
+        # Main entry enables subentries
         _LOGGER.info("Main SNCB/NMBS integration entry set up successfully")
         return True
 

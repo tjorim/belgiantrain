@@ -80,10 +80,88 @@ class NMBSConfigFlow(ConfigFlow, domain=DOMAIN):
         except CannotConnectError:
             return self.async_abort(reason="api_unavailable")
 
-        # Create the main integration entry (no specific data)
-        return self.async_create_entry(
-            title="SNCB/NMBS Belgian Trains",
-            data={},
+        # Show menu to choose first sensor type
+        return self.async_show_menu(
+            step_id="user",
+            menu_options=["connection", "liveboard"],
+        )
+
+    async def async_step_connection(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Handle adding a connection during initial setup."""
+        if user_input is not None:
+            # Create main entry and store connection data to be added as subentry
+            return self.async_create_entry(
+                title="SNCB/NMBS Belgian Trains",
+                data={"first_connection": user_input},
+            )
+
+        # Fetch station choices
+        try:
+            choices = await self._fetch_stations_choices()
+        except CannotConnectError:
+            return self.async_abort(reason="api_unavailable")
+
+        errors: dict = {}
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_STATION_FROM): SelectSelector(
+                    SelectSelectorConfig(
+                        options=choices,
+                        mode=SelectSelectorMode.DROPDOWN,
+                    )
+                ),
+                vol.Required(CONF_STATION_TO): SelectSelector(
+                    SelectSelectorConfig(
+                        options=choices,
+                        mode=SelectSelectorMode.DROPDOWN,
+                    )
+                ),
+                vol.Optional(CONF_EXCLUDE_VIAS): BooleanSelector(),
+                vol.Optional(CONF_SHOW_ON_MAP): BooleanSelector(),
+            }
+        )
+
+        return self.async_show_form(
+            step_id="connection",
+            data_schema=schema,
+            errors=errors,
+        )
+
+    async def async_step_liveboard(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Handle adding a liveboard during initial setup."""
+        if user_input is not None:
+            # Create main entry and store liveboard data to be added as subentry
+            return self.async_create_entry(
+                title="SNCB/NMBS Belgian Trains",
+                data={"first_liveboard": user_input},
+            )
+
+        # Fetch station choices
+        try:
+            choices = await self._fetch_stations_choices()
+        except CannotConnectError:
+            return self.async_abort(reason="api_unavailable")
+
+        errors: dict = {}
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_STATION_LIVE): SelectSelector(
+                    SelectSelectorConfig(
+                        options=choices,
+                        mode=SelectSelectorMode.DROPDOWN,
+                    )
+                ),
+            }
+        )
+
+        return self.async_show_form(
+            step_id="liveboard",
+            data_schema=schema,
+            errors=errors,
         )
 
 

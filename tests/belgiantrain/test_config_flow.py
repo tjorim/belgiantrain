@@ -20,7 +20,7 @@ from custom_components.belgiantrain.const import (
 
 
 async def test_form(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
-    """Test we can set up the integration."""
+    """Test we can set up the integration with a connection."""
     # Mock the station list
     mock_station_1 = MagicMock()
     mock_station_1.id = "BE.NMBS.008812005"
@@ -41,11 +41,47 @@ async def test_form(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
         result = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
+
+    # Should show menu to choose connection or liveboard
+    assert result["type"] == FlowResultType.MENU
+    assert result["step_id"] == "user"
+    assert "connection" in result["menu_options"]
+    assert "liveboard" in result["menu_options"]
+
+    # Choose connection
+    with patch("custom_components.belgiantrain.config_flow.iRail") as mock_irail:
+        mock_api = AsyncMock()
+        mock_api.get_stations.return_value = mock_stations_response
+        mock_irail.return_value = mock_api
+
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {"next_step_id": "connection"},
+        )
+
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "connection"
+
+    # Configure connection
+    with patch("custom_components.belgiantrain.config_flow.iRail") as mock_irail:
+        mock_api = AsyncMock()
+        mock_api.get_stations.return_value = mock_stations_response
+        mock_irail.return_value = mock_api
+
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_STATION_FROM: "BE.NMBS.008812005",
+                CONF_STATION_TO: "BE.NMBS.008892007",
+                CONF_EXCLUDE_VIAS: False,
+                CONF_SHOW_ON_MAP: True,
+            },
+        )
         await hass.async_block_till_done()
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["title"] == "SNCB/NMBS Belgian Trains"
-    assert result["data"] == {}
+    assert "first_connection" in result["data"]
     assert len(mock_setup_entry.mock_calls) == 1
 
 

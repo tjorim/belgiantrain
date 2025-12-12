@@ -3,7 +3,28 @@
         "step": {
             "user": {
                 "title": "Set up SNCB/NMBS Integration",
-                "description": "After setup, add connections or liveboards using the 'Add Entry' button"
+                "description": "Choose what you want to monitor",
+                "menu_options": {
+                    "connection": "Monitor travel time between two stations",
+                    "liveboard": "Monitor departures from a station"
+                }
+            },
+            "connection": {
+                "title": "Add Connection",
+                "description": "Monitor travel time between two stations",
+                "data": {
+                    "station_from": "Departure station",
+                    "station_to": "Arrival station",
+                    "exclude_vias": "Exclude via connections",
+                    "show_on_map": "Show on map"
+                }
+            },
+            "liveboard": {
+                "title": "Add Liveboard",
+                "description": "Monitor departures from a station",
+                "data": {
+                    "station_live": "Station"
+                }
             }
         },
         "error": {
