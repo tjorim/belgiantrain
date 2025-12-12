@@ -34,7 +34,10 @@ if TYPE_CHECKING:
     from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
     from pyrail.models import ConnectionDetails, LiveboardDeparture, StationDetails
 
-    from .coordinator import BelgianTrainDataUpdateCoordinator
+    from .coordinator import (
+        BelgianTrainDataUpdateCoordinator,
+        LiveboardDataUpdateCoordinator,
+    )
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -446,7 +449,7 @@ class StandaloneLiveboardSensor(CoordinatorEntity[dict[str, Any]], SensorEntity)
 
     def __init__(
         self,
-        coordinator: dict[str, Any],
+        coordinator: LiveboardDataUpdateCoordinator,
         station: StationDetails,
     ) -> None:
         """Initialize the standalone liveboard sensor."""

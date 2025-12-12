@@ -3,7 +3,6 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
@@ -93,11 +92,14 @@ async def test_form(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
     )
     await hass.async_block_till_done()
 
+    # Both checkboxes were selected, so we expect 2 liveboards
+    expected_liveboards = 2
+
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["title"] == "SNCB/NMBS Belgian Trains"
     assert "first_connection" in result["data"]
     assert "liveboards_to_add" in result["data"]
-    assert len(result["data"]["liveboards_to_add"]) == 2
+    assert len(result["data"]["liveboards_to_add"]) == expected_liveboards
     assert len(mock_setup_entry.mock_calls) == 1
 
 
@@ -258,7 +260,7 @@ async def test_subentry_liveboard_already_configured(
     """Test subentry flow aborts when liveboard is already configured."""
     # Note: This test is skipped because ConfigSubentryFlow requires HA 2025.2+
     # The logic below shows how the test should work when the feature is available
-    
+
     mock_station_1 = MagicMock()
     mock_station_1.id = "BE.NMBS.008812005"
     mock_station_1.standard_name = "Brussels-Central"

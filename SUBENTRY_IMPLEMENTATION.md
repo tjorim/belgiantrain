@@ -117,7 +117,7 @@ Added test cases for subentry flows:
 - `test_subentry_liveboard_already_configured`: Tests duplicate detection
 - `test_subentry_liveboard_api_unavailable`: Tests API error handling
 
-**Note**: Tests are marked with `@pytest.mark.skip` because `ConfigSubentryFlow` is not available in current stable Home Assistant releases. They will work with Home Assistant 2025.2+.
+**Note**: Tests are marked with `@pytest.mark.skip` and are skipped when running tests against Home Assistant versions < 2025.2 (ConfigSubentryFlow was introduced in 2025.2). They will execute successfully with Home Assistant 2025.2+.
 
 ## User Experience
 
