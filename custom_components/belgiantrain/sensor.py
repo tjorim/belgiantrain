@@ -19,8 +19,10 @@ from homeassistant.util import dt as dt_util
 from .const import (
     CONF_EXCLUDE_VIAS,
     CONF_STATION_FROM,
+    CONF_STATION_LIVE,
     CONF_STATION_TO,
     DOMAIN,
+    SUBENTRY_TYPE_LIVEBOARD,
     find_station,
 )
 
@@ -69,6 +71,34 @@ async def async_setup_entry(
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up NMBS sensor entities based on a config entry."""
+    # Get coordinator from hass.data
+    domain_data = hass.data.get(DOMAIN, {})
+    coordinators = domain_data.get("coordinators", {})
+    coordinator = coordinators.get(config_entry.entry_id)
+
+    if coordinator is None:
+        _LOGGER.error(
+            "No coordinator found for entry '%s'. Aborting sensor setup.",
+            config_entry.entry_id,
+        )
+        return
+
+    # Check if this is a subentry for a standalone liveboard
+    if config_entry.subentry_type == SUBENTRY_TYPE_LIVEBOARD:
+        station = find_station(hass, config_entry.data[CONF_STATION_LIVE])
+
+        if station is None:
+            _LOGGER.error(
+                "Could not find station: '%s'. Aborting setup.",
+                config_entry.data.get(CONF_STATION_LIVE),
+            )
+            return
+
+        # Create standalone liveboard sensor (enabled by default)
+        async_add_entities([StandaloneLiveboardSensor(coordinator, station)])
+        return
+
+    # Connection-based setup
     name = config_entry.data.get(CONF_NAME, None)
     show_on_map = config_entry.data.get(CONF_SHOW_ON_MAP, False)
     excl_vias = config_entry.data.get(CONF_EXCLUDE_VIAS, False)
@@ -81,18 +111,6 @@ async def async_setup_entry(
             "Could not find station(s): from='%s', to='%s'. Aborting setup.",
             config_entry.data.get(CONF_STATION_FROM),
             config_entry.data.get(CONF_STATION_TO),
-        )
-        return
-
-    # Get coordinator from hass.data
-    domain_data = hass.data.get(DOMAIN, {})
-    coordinators = domain_data.get("coordinators", {})
-    coordinator = coordinators.get(config_entry.entry_id)
-
-    if coordinator is None:
-        _LOGGER.error(
-            "No coordinator found for entry '%s'. Aborting sensor setup.",
-            config_entry.entry_id,
         )
         return
 
@@ -402,4 +420,101 @@ class NMBSSensor(CoordinatorEntity[dict[str, Any]], SensorEntity):
         )
 
         self._state = duration
+        self.async_write_ha_state()
+
+
+class StandaloneLiveboardSensor(CoordinatorEntity[dict[str, Any]], SensorEntity):
+    """Standalone liveboard sensor for a single station."""
+
+    _attr_attribution = "https://api.irail.be/"
+
+    def __init__(
+        self,
+        coordinator: dict[str, Any],
+        station: StationDetails,
+    ) -> None:
+        """Initialize the standalone liveboard sensor."""
+        super().__init__(coordinator)
+        self._station = station
+        self._attrs: LiveboardDeparture | None = None
+        self._state: str | None = None
+
+    @property
+    def name(self) -> str:
+        """Return the sensor name."""
+        return f"Liveboard - {self._station.standard_name}"
+
+    @property
+    def unique_id(self) -> str:
+        """Return the unique ID."""
+        return f"nmbs_liveboard_{self._station.id}"
+
+    @property
+    def icon(self) -> str:
+        """Return the default icon or an alert icon if delays."""
+        if self._attrs:
+            delay = getattr(self._attrs, "delay", 0)
+            if delay and int(delay) > 0:
+                return DEFAULT_ICON_ALERT
+
+        return DEFAULT_ICON
+
+    @property
+    def native_value(self) -> str | None:
+        """Return sensor state."""
+        return self._state
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        """Return the sensor attributes if data is available."""
+        if self._state is None or not self._attrs:
+            return None
+
+        delay = get_delay_in_minutes(self._attrs.delay)
+        departure = get_time_until(self._attrs.time)
+
+        attrs = {
+            "departure": f"In {departure} minutes",
+            "departure_minutes": departure,
+            "extra_train": self._attrs.is_extra,
+            "vehicle_id": self._attrs.vehicle,
+            "monitored_station": self._station.standard_name,
+        }
+
+        if delay > 0:
+            attrs["delay"] = f"{delay} minutes"
+            attrs["delay_minutes"] = delay
+
+        return attrs
+
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        if self.coordinator.data is None:
+            _LOGGER.warning("Coordinator data not available")
+            self._state = None
+            self._attrs = None
+            self.async_write_ha_state()
+            return
+
+        liveboard = self.coordinator.data.get("liveboard")
+
+        if liveboard is None:
+            _LOGGER.warning("Liveboard data not available in coordinator")
+            self._state = None
+            self._attrs = None
+            self.async_write_ha_state()
+            return
+
+        if not (departures := liveboard.departures):
+            _LOGGER.warning("API returned invalid departures: %r", liveboard)
+            self._state = None
+            self._attrs = None
+            self.async_write_ha_state()
+            return
+
+        _LOGGER.debug("Processing departures from coordinator: %r", departures)
+        next_departure = departures[0]
+
+        self._attrs = next_departure
+        self._state = f"Track {next_departure.platform} - {next_departure.station}"
         self.async_write_ha_state()

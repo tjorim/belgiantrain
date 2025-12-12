@@ -10,8 +10,18 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from pyrail import iRail
 
-from .const import CONF_STATION_FROM, CONF_STATION_TO, DOMAIN, find_station
-from .coordinator import BelgianTrainDataUpdateCoordinator
+from .const import (
+    CONF_STATION_FROM,
+    CONF_STATION_LIVE,
+    CONF_STATION_TO,
+    DOMAIN,
+    SUBENTRY_TYPE_LIVEBOARD,
+    find_station,
+)
+from .coordinator import (
+    BelgianTrainDataUpdateCoordinator,
+    LiveboardDataUpdateCoordinator,
+)
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -260,7 +270,32 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.error("Station data is missing or invalid; cannot set up platforms.")
         return False
 
-    # Get stations from config entry
+    # Check if this is a subentry for a standalone liveboard
+    if entry.subentry_type == SUBENTRY_TYPE_LIVEBOARD:
+        # Get station from config entry
+        station = find_station(hass, entry.data[CONF_STATION_LIVE])
+
+        if station is None:
+            _LOGGER.error(
+                "Could not find station: '%s'. Aborting setup.",
+                entry.data.get(CONF_STATION_LIVE),
+            )
+            return False
+
+        # Create API client and coordinator for liveboard
+        api_client = iRail(session=async_get_clientsession(hass))
+        coordinator = LiveboardDataUpdateCoordinator(hass, api_client, station)
+
+        # Fetch initial data
+        await coordinator.async_config_entry_first_refresh()
+
+        # Store coordinator
+        hass.data[DOMAIN]["coordinators"][entry.entry_id] = coordinator
+
+        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+        return True
+
+    # Get stations from config entry (connection-based)
     station_from = find_station(hass, entry.data[CONF_STATION_FROM])
     station_to = find_station(hass, entry.data[CONF_STATION_TO])
 

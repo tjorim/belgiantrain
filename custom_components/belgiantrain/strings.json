@@ -19,5 +19,25 @@
             "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
             "api_unavailable": "The iRail API is currently unavailable. Please try again later."
         }
+    },
+    "subentry": {
+        "liveboard": {
+            "step": {
+                "user": {
+                    "title": "Add Liveboard Sensor",
+                    "description": "Select a station to monitor departures",
+                    "data": {
+                        "station_live": "Station"
+                    }
+                }
+            },
+            "error": {
+                "invalid_station": "Invalid station selection. Please try again."
+            },
+            "abort": {
+                "already_configured": "This station is already configured as a liveboard",
+                "api_unavailable": "The iRail API is currently unavailable. Please try again later."
+            }
+        }
     }
 }

@@ -17,6 +17,44 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 
+class LiveboardDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
+    """Class to manage fetching liveboard data for a single station from the API."""
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        api_client: iRail,
+        station: StationDetails,
+    ) -> None:
+        """Initialize the coordinator."""
+        self.api_client = api_client
+        self.station = station
+
+        super().__init__(
+            hass,
+            _LOGGER,
+            name=f"Belgian Train Liveboard - {station.standard_name}",
+            update_interval=timedelta(minutes=1),
+        )
+
+    async def _async_update_data(self) -> dict[str, Any]:
+        """Fetch data from API."""
+        try:
+            liveboard = await self.api_client.get_liveboard(self.station.id)
+        except Exception as err:
+            msg = f"Error communicating with iRail API: {err}"
+            raise UpdateFailed(msg) from err
+
+        if liveboard is None:
+            msg = (
+                f"Failed to fetch liveboard data for "
+                f"{self.station.standard_name} from iRail API"
+            )
+            raise UpdateFailed(msg)
+
+        return {"liveboard": liveboard}
+
+
 class BelgianTrainDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Class to manage fetching Belgian train data from the API."""
 
