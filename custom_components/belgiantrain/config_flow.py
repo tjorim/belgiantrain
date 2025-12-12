@@ -5,15 +5,17 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
-from homeassistant.config_entries import (
-    ConfigEntry,
-    ConfigFlow,
-    ConfigFlowResult,
-    ConfigSubentryFlow,
-    SubentryFlowResult,
-)
+from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
+# ConfigSubentryFlow is only available in Home Assistant 2025.2+
+try:
+    from homeassistant.config_entries import ConfigSubentryFlow, SubentryFlowResult
+except ImportError:
+    # Fallback for older versions - this won't be used but prevents import errors
+    ConfigSubentryFlow = None  # type: ignore[misc,assignment]
+    SubentryFlowResult = None  # type: ignore[misc,assignment]
 from homeassistant.helpers.selector import (
     BooleanSelector,
     SelectOptionDict,
@@ -44,13 +46,15 @@ class NMBSConfigFlow(ConfigFlow, domain=DOMAIN):
         """Initialize."""
         self.stations: list[StationDetails] = []
 
-    @classmethod
-    @callback
-    def async_get_supported_subentry_types(
-        cls, _config_entry: ConfigEntry
-    ) -> dict[str, type[ConfigSubentryFlow]]:
-        """Return subentries supported by this handler."""
-        return {SUBENTRY_TYPE_LIVEBOARD: LiveboardFlowHandler}
+    if ConfigSubentryFlow is not None:
+
+        @classmethod
+        @callback
+        def async_get_supported_subentry_types(
+            cls, _config_entry: ConfigEntry
+        ) -> dict[str, type[ConfigSubentryFlow]]:
+            """Return subentries supported by this handler."""
+            return {SUBENTRY_TYPE_LIVEBOARD: LiveboardFlowHandler}
 
     async def _fetch_stations(self) -> list[StationDetails]:
         """Fetch the stations."""
@@ -145,68 +149,74 @@ class NMBSConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class LiveboardFlowHandler(ConfigSubentryFlow):
-    """Handle subentry flow for liveboard sensors."""
+if ConfigSubentryFlow is not None:
 
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> SubentryFlowResult:
-        """Handle the step to setup a liveboard sensor for a station."""
-        errors: dict = {}
+    class LiveboardFlowHandler(ConfigSubentryFlow):
+        """Handle subentry flow for liveboard sensors."""
 
-        # Fetch stations if not already done
-        if user_input is not None:
-            station_id = user_input[CONF_STATION_LIVE]
+        async def async_step_user(
+            self, user_input: dict[str, Any] | None = None
+        ) -> SubentryFlowResult:
+            """Handle the step to setup a liveboard sensor for a station."""
+            errors: dict = {}
 
-            # Check if this station is already configured as a subentry
-            for entry in self.hass.config_entries.async_entries(DOMAIN):
-                for subentry in entry.subentries.values():
-                    if subentry.unique_id == f"liveboard_{station_id}":
-                        return self.async_abort(reason="already_configured")
+            # Fetch stations if not already done
+            if user_input is not None:
+                station_id = user_input[CONF_STATION_LIVE]
 
-            # Get station details for the title
-            stations = self.hass.data.get(DOMAIN, {}).get("stations", [])
-            station = next((s for s in stations if s.id == station_id), None)
+                # Check if this station is already configured as a subentry
+                for entry in self.hass.config_entries.async_entries(DOMAIN):
+                    for subentry in entry.subentries.values():
+                        if subentry.unique_id == f"liveboard_{station_id}":
+                            return self.async_abort(reason="already_configured")
 
-            if station is None:
-                errors["base"] = "invalid_station"
-            else:
-                return self.async_create_entry(
-                    title=f"Liveboard - {station.standard_name}",
-                    data={CONF_STATION_LIVE: station_id},
-                    unique_id=f"liveboard_{station_id}",
-                )
+                # Get station details for the title
+                stations = self.hass.data.get(DOMAIN, {}).get("stations", [])
+                station = next((s for s in stations if s.id == station_id), None)
 
-        # Fetch station choices
-        try:
-            api_client = iRail(session=async_get_clientsession(self.hass))
-            stations_response = await api_client.get_stations()
-            if stations_response is None:
+                if station is None:
+                    errors["base"] = "invalid_station"
+                else:
+                    return self.async_create_entry(
+                        title=f"Liveboard - {station.standard_name}",
+                        data={CONF_STATION_LIVE: station_id},
+                        unique_id=f"liveboard_{station_id}",
+                    )
+
+            # Fetch station choices
+            try:
+                api_client = iRail(session=async_get_clientsession(self.hass))
+                stations_response = await api_client.get_stations()
+                if stations_response is None:
+                    return self.async_abort(reason="api_unavailable")
+
+                choices = [
+                    SelectOptionDict(value=station.id, label=station.standard_name)
+                    for station in stations_response.stations
+                ]
+            except CannotConnectError:
                 return self.async_abort(reason="api_unavailable")
 
-            choices = [
-                SelectOptionDict(value=station.id, label=station.standard_name)
-                for station in stations_response.stations
-            ]
-        except CannotConnectError:
-            return self.async_abort(reason="api_unavailable")
+            schema = vol.Schema(
+                {
+                    vol.Required(CONF_STATION_LIVE): SelectSelector(
+                        SelectSelectorConfig(
+                            options=choices,
+                            mode=SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
+                }
+            )
 
-        schema = vol.Schema(
-            {
-                vol.Required(CONF_STATION_LIVE): SelectSelector(
-                    SelectSelectorConfig(
-                        options=choices,
-                        mode=SelectSelectorMode.DROPDOWN,
-                    )
-                ),
-            }
-        )
+            return self.async_show_form(
+                step_id="user",
+                data_schema=schema,
+                errors=errors,
+            )
 
-        return self.async_show_form(
-            step_id="user",
-            data_schema=schema,
-            errors=errors,
-        )
+else:
+    # Fallback class when ConfigSubentryFlow is not available
+    LiveboardFlowHandler = None  # type: ignore[assignment,misc]
 
 
 class CannotConnectError(Exception):
