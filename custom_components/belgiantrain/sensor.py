@@ -71,6 +71,10 @@ async def async_setup_entry(
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up NMBS sensor entities based on a config entry."""
+    # Skip setup for main integration entry (no sensors)
+    if config_entry.subentry_type is None and not config_entry.data:
+        return
+
     # Get coordinator from hass.data
     domain_data = hass.data.get(DOMAIN, {})
     coordinators = domain_data.get("coordinators", {})
@@ -98,13 +102,13 @@ async def async_setup_entry(
         async_add_entities([StandaloneLiveboardSensor(coordinator, station)])
         return
 
-    # Connection-based setup
+    # Connection setup (both subentry and legacy)
     name = config_entry.data.get(CONF_NAME, None)
     show_on_map = config_entry.data.get(CONF_SHOW_ON_MAP, False)
     excl_vias = config_entry.data.get(CONF_EXCLUDE_VIAS, False)
 
-    station_from = find_station(hass, config_entry.data[CONF_STATION_FROM])
-    station_to = find_station(hass, config_entry.data[CONF_STATION_TO])
+    station_from = find_station(hass, config_entry.data.get(CONF_STATION_FROM, ""))
+    station_to = find_station(hass, config_entry.data.get(CONF_STATION_TO, ""))
 
     if station_from is None or station_to is None:
         _LOGGER.error(
@@ -115,8 +119,6 @@ async def async_setup_entry(
         return
 
     # setup the connection sensor
-    # Note: Liveboard sensors are no longer created here - users can add them
-    # as separate subentries if needed
     async_add_entities([
         NMBSSensor(
             coordinator, name, show_on_map, station_from, station_to, excl_vias

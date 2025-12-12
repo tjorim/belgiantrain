@@ -2,13 +2,8 @@
     "config": {
         "step": {
             "user": {
-                "data": {
-                    "station_from": "Departure station",
-                    "station_to": "Arrival station",
-                    "exclude_vias": "Exclude via connections",
-                    "show_on_map": "Show on map"
-                },
-                "description": "Configure a train connection between two stations"
+                "title": "Set up SNCB/NMBS Integration",
+                "description": "After setup, add connections or liveboards using the 'Add Entry' button"
             }
         },
         "error": {
@@ -21,11 +16,33 @@
         }
     },
     "subentry": {
+        "connection": {
+            "step": {
+                "user": {
+                    "title": "Add Connection Sensor",
+                    "description": "Monitor travel time between two stations",
+                    "data": {
+                        "station_from": "Departure station",
+                        "station_to": "Arrival station",
+                        "exclude_vias": "Exclude via connections",
+                        "show_on_map": "Show on map"
+                    }
+                }
+            },
+            "error": {
+                "same_station": "Departure and arrival stations must be different",
+                "invalid_station": "Invalid station selection. Please try again."
+            },
+            "abort": {
+                "already_configured": "This connection is already configured",
+                "api_unavailable": "The iRail API is currently unavailable. Please try again later."
+            }
+        },
         "liveboard": {
             "step": {
                 "user": {
                     "title": "Add Liveboard Sensor",
-                    "description": "Select a station to monitor departures",
+                    "description": "Monitor departures from a station",
                     "data": {
                         "station_live": "Station"
                     }

@@ -15,6 +15,7 @@ from .const import (
     CONF_STATION_LIVE,
     CONF_STATION_TO,
     DOMAIN,
+    SUBENTRY_TYPE_CONNECTION,
     SUBENTRY_TYPE_LIVEBOARD,
     find_station,
 )
@@ -262,13 +263,19 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:  # noqa
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  # noqa: PLR0911
     """Set up SNCB/NMBS from a config entry."""
     # Ensure station data exists before setting up platforms
     domain_data = hass.data.get(DOMAIN)
     if not isinstance(domain_data, dict) or "stations" not in domain_data:
         _LOGGER.error("Station data is missing or invalid; cannot set up platforms.")
         return False
+
+    # Check if this is the main integration entry (no subentry type)
+    if entry.subentry_type is None:
+        # Main integration entry - no sensors, just enables subentries
+        _LOGGER.info("Main SNCB/NMBS integration entry set up successfully")
+        return True
 
     # Check if this is a subentry for a standalone liveboard
     if entry.subentry_type == SUBENTRY_TYPE_LIVEBOARD:
@@ -295,19 +302,48 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
         return True
 
-    # Get stations from config entry (connection-based)
-    station_from = find_station(hass, entry.data[CONF_STATION_FROM])
-    station_to = find_station(hass, entry.data[CONF_STATION_TO])
+    # Check if this is a subentry for a connection
+    if entry.subentry_type == SUBENTRY_TYPE_CONNECTION:
+        # Get stations from config entry
+        station_from = find_station(hass, entry.data[CONF_STATION_FROM])
+        station_to = find_station(hass, entry.data[CONF_STATION_TO])
+
+        if station_from is None or station_to is None:
+            _LOGGER.error(
+                "Could not find station(s): from='%s', to='%s'. Aborting setup.",
+                entry.data.get(CONF_STATION_FROM),
+                entry.data.get(CONF_STATION_TO),
+            )
+            return False
+
+        # Create API client and coordinator
+        api_client = iRail(session=async_get_clientsession(hass))
+        coordinator = BelgianTrainDataUpdateCoordinator(
+            hass, api_client, station_from, station_to
+        )
+
+        # Fetch initial data
+        await coordinator.async_config_entry_first_refresh()
+
+        # Store coordinator
+        hass.data[DOMAIN]["coordinators"][entry.entry_id] = coordinator
+
+        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+        return True
+
+    # Legacy support: entries without subentry_type are connections
+    # (for backward compatibility with existing configurations)
+    station_from = find_station(hass, entry.data.get(CONF_STATION_FROM, ""))
+    station_to = find_station(hass, entry.data.get(CONF_STATION_TO, ""))
 
     if station_from is None or station_to is None:
-        _LOGGER.error(
-            "Could not find station(s): from='%s', to='%s'. Aborting setup.",
-            entry.data.get(CONF_STATION_FROM),
-            entry.data.get(CONF_STATION_TO),
+        _LOGGER.warning(
+            "Legacy connection entry found but stations not valid. "
+            "Please reconfigure this entry."
         )
         return False
 
-    # Create API client and coordinator
+    # Create API client and coordinator for legacy connection
     api_client = iRail(session=async_get_clientsession(hass))
     coordinator = BelgianTrainDataUpdateCoordinator(
         hass, api_client, station_from, station_to
