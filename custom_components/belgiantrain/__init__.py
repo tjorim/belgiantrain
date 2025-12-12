@@ -132,7 +132,7 @@ async def _async_get_composition_handler(
                                 "has_bike_section": getattr(
                                     unit, "has_bike_section", False
                                 ),
-                                "has_prmSection": getattr(
+                                "has_prm_section": getattr(
                                     unit, "has_prmSection", False
                                 ),
                             }
