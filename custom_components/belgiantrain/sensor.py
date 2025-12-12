@@ -75,9 +75,9 @@ async def async_setup_entry(
 ) -> None:
     """Set up NMBS sensor entities based on a config entry."""
     # Skip setup for main integration entry (has initial setup data but no coordinator)
-    if config_entry.subentry_type is None and set(config_entry.data.keys()).issubset(
-        {"first_connection", "first_liveboard", "liveboards_to_add"}
-    ):
+    if getattr(config_entry, "subentry_type", None) is None and set(
+        config_entry.data.keys()
+    ).issubset({"first_connection", "first_liveboard", "liveboards_to_add"}):
         return
 
     # Get coordinator from hass.data
@@ -93,7 +93,7 @@ async def async_setup_entry(
         return
 
     # Check if this is a subentry for a standalone liveboard
-    if config_entry.subentry_type == SUBENTRY_TYPE_LIVEBOARD:
+    if getattr(config_entry, "subentry_type", None) == SUBENTRY_TYPE_LIVEBOARD:
         station = find_station(hass, config_entry.data[CONF_STATION_LIVE])
 
         if station is None:
@@ -130,7 +130,7 @@ async def async_setup_entry(
 
     # For legacy entries (no subentry_type), also create disabled liveboards
     # to maintain backward compatibility
-    if config_entry.subentry_type is None:
+    if getattr(config_entry, "subentry_type", None) is None:
         entities.extend(
             [
                 NMBSLiveBoard(
