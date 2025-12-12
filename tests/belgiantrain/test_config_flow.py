@@ -120,7 +120,7 @@ async def test_form_same_station(hass: HomeAssistant) -> None:
     mock_stations_response = MagicMock()
     mock_stations_response.stations = [mock_station_1, mock_station_2]
 
-    # Create main entry first
+    # Create main entry first - go through guided initial setup
     with patch("custom_components.belgiantrain.config_flow.iRail") as mock_irail:
         mock_api = AsyncMock()
         mock_api.get_stations.return_value = mock_stations_response
@@ -129,7 +129,54 @@ async def test_form_same_station(hass: HomeAssistant) -> None:
         result = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        await hass.async_block_till_done()
+
+    # Should show menu
+    assert result["type"] == FlowResultType.MENU
+    assert result["step_id"] == "user"
+
+    # Choose connection
+    with patch("custom_components.belgiantrain.config_flow.iRail") as mock_irail:
+        mock_api = AsyncMock()
+        mock_api.get_stations.return_value = mock_stations_response
+        mock_irail.return_value = mock_api
+
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {"next_step_id": "connection"},
+        )
+
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "connection"
+
+    # Configure connection with different stations
+    with patch("custom_components.belgiantrain.config_flow.iRail") as mock_irail:
+        mock_api = AsyncMock()
+        mock_api.get_stations.return_value = mock_stations_response
+        mock_irail.return_value = mock_api
+
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_STATION_FROM: "BE.NMBS.008812005",
+                CONF_STATION_TO: "BE.NMBS.008892007",
+                CONF_EXCLUDE_VIAS: False,
+                CONF_SHOW_ON_MAP: False,
+            },
+        )
+
+    # Should show form asking about liveboards
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "connection_liveboards"
+
+    # Skip adding liveboards
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            "add_departure_liveboard": False,
+            "add_arrival_liveboard": False,
+        },
+    )
+    await hass.async_block_till_done()
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
     main_entry = result["result"]
