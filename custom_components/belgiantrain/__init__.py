@@ -10,8 +10,20 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from pyrail import iRail
 
-from .const import CONF_STATION_FROM, CONF_STATION_TO, DOMAIN, find_station
-from .coordinator import BelgianTrainDataUpdateCoordinator
+from .const import (
+    CONF_EXCLUDE_VIAS,
+    CONF_STATION_FROM,
+    CONF_STATION_LIVE,
+    CONF_STATION_TO,
+    DOMAIN,
+    SUBENTRY_TYPE_CONNECTION,
+    SUBENTRY_TYPE_LIVEBOARD,
+    find_station,
+)
+from .coordinator import (
+    BelgianTrainDataUpdateCoordinator,
+    LiveboardDataUpdateCoordinator,
+)
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -252,7 +264,7 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:  # noqa
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  # noqa: PLR0911, PLR0912, PLR0915
     """Set up SNCB/NMBS from a config entry."""
     # Ensure station data exists before setting up platforms
     domain_data = hass.data.get(DOMAIN)
@@ -260,19 +272,147 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.error("Station data is missing or invalid; cannot set up platforms.")
         return False
 
-    # Get stations from config entry
-    station_from = find_station(hass, entry.data[CONF_STATION_FROM])
-    station_to = find_station(hass, entry.data[CONF_STATION_TO])
+    # Check if this is the main integration entry (no subentry type)
+    if entry.subentry_type is None:
+        # Check if this is a legacy connection entry (has CONF_STATION_FROM/TO directly)
+        # If so, skip this block and let it be handled by legacy support code below
+        is_legacy_connection = (
+            CONF_STATION_FROM in entry.data and CONF_STATION_TO in entry.data
+        )
+
+        if not is_legacy_connection:
+            # Main integration entry - check for initial data to create first subentry
+            if "first_connection" in entry.data:
+                # Create a connection subentry from the initial setup
+                connection_data = entry.data["first_connection"]
+                if connection_data.get(CONF_STATION_FROM) == connection_data.get(
+                    CONF_STATION_TO
+                ):
+                    _LOGGER.error("Cannot create connection with same station")
+                    return False
+
+                # Create connection subentry
+                station_from_id = connection_data[CONF_STATION_FROM]
+                station_to_id = connection_data[CONF_STATION_TO]
+                excl_vias = connection_data.get(CONF_EXCLUDE_VIAS, False)
+                vias = "_excl_vias" if excl_vias else ""
+
+                station_from = find_station(hass, station_from_id)
+                station_to = find_station(hass, station_to_id)
+
+                if station_from and station_to:
+                    await hass.config_entries.async_add_subentry(
+                        entry,
+                        title=(
+                            f"Connection: {station_from.standard_name} → "
+                            f"{station_to.standard_name}"
+                        ),
+                        data=connection_data,
+                        unique_id=f"connection_{station_from_id}_{station_to_id}{vias}",
+                        subentry_type=SUBENTRY_TYPE_CONNECTION,
+                    )
+
+                    # Create liveboard subentries if requested
+                    if "liveboards_to_add" in entry.data:
+                        # Use set to ensure unique station IDs
+                        unique_station_ids = set(entry.data["liveboards_to_add"])
+                        for station_id in unique_station_ids:
+                            station = find_station(hass, station_id)
+                            if station:
+                                await hass.config_entries.async_add_subentry(
+                                    entry,
+                                    title=f"Liveboard - {station.standard_name}",
+                                    data={CONF_STATION_LIVE: station_id},
+                                    unique_id=f"liveboard_{station_id}",
+                                    subentry_type=SUBENTRY_TYPE_LIVEBOARD,
+                                )
+
+            elif "first_liveboard" in entry.data:
+                # Create a liveboard subentry from the initial setup
+                liveboard_data = entry.data["first_liveboard"]
+                station_id = liveboard_data[CONF_STATION_LIVE]
+                station = find_station(hass, station_id)
+
+                if station:
+                    await hass.config_entries.async_add_subentry(
+                        entry,
+                        title=f"Liveboard - {station.standard_name}",
+                        data=liveboard_data,
+                        unique_id=f"liveboard_{station_id}",
+                        subentry_type=SUBENTRY_TYPE_LIVEBOARD,
+                    )
+
+            # Main entry enables subentries
+            _LOGGER.info("Main SNCB/NMBS integration entry set up successfully")
+            return True
+
+    # Check if this is a subentry for a standalone liveboard
+    if entry.subentry_type == SUBENTRY_TYPE_LIVEBOARD:
+        # Get station from config entry
+        station = find_station(hass, entry.data[CONF_STATION_LIVE])
+
+        if station is None:
+            _LOGGER.error(
+                "Could not find station: '%s'. Aborting setup.",
+                entry.data.get(CONF_STATION_LIVE),
+            )
+            return False
+
+        # Create API client and coordinator for liveboard
+        api_client = iRail(session=async_get_clientsession(hass))
+        coordinator = LiveboardDataUpdateCoordinator(hass, api_client, station)
+
+        # Fetch initial data
+        await coordinator.async_config_entry_first_refresh()
+
+        # Store coordinator
+        hass.data[DOMAIN]["coordinators"][entry.entry_id] = coordinator
+
+        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+        return True
+
+    # Check if this is a subentry for a connection
+    if entry.subentry_type == SUBENTRY_TYPE_CONNECTION:
+        # Get stations from config entry
+        station_from = find_station(hass, entry.data[CONF_STATION_FROM])
+        station_to = find_station(hass, entry.data[CONF_STATION_TO])
+
+        if station_from is None or station_to is None:
+            _LOGGER.error(
+                "Could not find station(s): from='%s', to='%s'. Aborting setup.",
+                entry.data.get(CONF_STATION_FROM),
+                entry.data.get(CONF_STATION_TO),
+            )
+            return False
+
+        # Create API client and coordinator
+        api_client = iRail(session=async_get_clientsession(hass))
+        coordinator = BelgianTrainDataUpdateCoordinator(
+            hass, api_client, station_from, station_to
+        )
+
+        # Fetch initial data
+        await coordinator.async_config_entry_first_refresh()
+
+        # Store coordinator
+        hass.data[DOMAIN]["coordinators"][entry.entry_id] = coordinator
+
+        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+        return True
+
+    # Legacy support: entries without subentry_type are connections
+    # (for backward compatibility with existing configurations)
+    station_from = find_station(hass, entry.data.get(CONF_STATION_FROM, ""))
+    station_to = find_station(hass, entry.data.get(CONF_STATION_TO, ""))
 
     if station_from is None or station_to is None:
-        _LOGGER.error(
-            "Could not find station(s): from='%s', to='%s'. Aborting setup.",
-            entry.data.get(CONF_STATION_FROM),
-            entry.data.get(CONF_STATION_TO),
+        _LOGGER.warning(
+            "Legacy connection entry found but stations not valid. "
+            "Please reconfigure this entry."
         )
         return False
 
-    # Create API client and coordinator
+    # Create API client and coordinator for legacy connection
     api_client = iRail(session=async_get_clientsession(hass))
     coordinator = BelgianTrainDataUpdateCoordinator(
         hass, api_client, station_from, station_to

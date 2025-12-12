@@ -20,7 +20,9 @@ This integration provides real-time train information from the iRail API (https:
   - Vehicle ID
   - Optional map display with station coordinates
 
-- **Liveboard Sensors**: View the next departures from any station (disabled by default):
+- **Liveboard Sensors**: View the next departures from any station:
+  - **Legacy connection-based liveboards**: For existing connections created before the subentry update, liveboard sensors for departure and arrival stations are automatically created (disabled by default for backward compatibility)
+  - **Standalone liveboards**: Add liveboard sensors for any station independently via the "Add Entry" button (requires Home Assistant 2025.2+)
   - Next train departure time
   - Destination station
   - Platform information
@@ -56,9 +58,47 @@ This integration provides real-time train information from the iRail API (https:
 6. (Optional) Enable "Exclude via connections" to only show direct trains
 7. (Optional) Enable "Show on map" to display station coordinates in sensor attributes
 
+#### Initial Setup (Home Assistant 2025.2+)
+
+With Home Assistant 2025.2+, the setup uses a guided flow:
+
+1. **Choose Sensor Type**: After API verification, you'll see a menu:
+   - "Monitor travel time between stations" (Connection)
+   - "Monitor departures from a station" (Liveboard)
+
+2. **If you choose Connection**:
+   - Select departure and arrival stations
+   - Choose options (exclude via connections, show on map)
+   - **Optional**: Check boxes to also add liveboard sensors for the departure and/or arrival stations
+   - The connection sensor (and any selected liveboards) will be created
+
+3. **If you choose Liveboard**:
+   - Select the station to monitor
+   - The liveboard sensor will be created
+
 The integration will create:
-- One main sensor showing the travel time in minutes between the two stations
-- Two liveboard sensors (disabled by default) for each station showing the next departure
+- Connection sensor(s) showing travel time in minutes between stations
+- Liveboard sensor(s) showing next departures from selected stations (if you checked the boxes or chose a liveboard)
+
+### Adding More Sensors (Home Assistant 2025.2+)
+
+After initial setup, you can add more connections or liveboards:
+
+1. Go to Settings → Devices & Services
+2. Find your SNCB/NMBS integration
+3. Click "Add Entry" (subentry button)
+4. Choose "Connection" or "Liveboard"
+5. Configure the sensor
+6. Click "Submit"
+
+This allows you to add as many connections or liveboards as needed.
+
+### Legacy Connections (Pre-2025.2)
+
+For existing connections created before Home Assistant 2025.2:
+- Connection sensor shows travel time (enabled by default)
+- Liveboard sensors for departure and arrival stations are automatically created (disabled by default for backward compatibility)
+- To monitor departures, enable these liveboard sensors in Home Assistant
 
 ## Sensors
 

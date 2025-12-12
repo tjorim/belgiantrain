@@ -18,6 +18,10 @@ CONF_STATION_LIVE = "station_live"
 CONF_EXCLUDE_VIAS = "exclude_vias"
 CONF_SHOW_ON_MAP = "show_on_map"
 
+# Subentry types
+SUBENTRY_TYPE_CONNECTION: Final = "connection"
+SUBENTRY_TYPE_LIVEBOARD: Final = "liveboard"
+
 
 def find_station_by_name(
     hass: "HomeAssistant", station_name: str
