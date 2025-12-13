@@ -344,13 +344,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                                 station_to.standard_name,
                             )
                             hass.config_entries.async_add_subentry(entry, subentry)
-                            # Find and reload newly created subentry
-                            for subentry_id, sub in entry.subentries.items():
-                                if sub.unique_id == unique_id:
-                                    await hass.config_entries.async_reload(
-                                        subentry_id
-                                    )
-                                    break
+                            # Home Assistant will automatically set up the new subentry
                         else:
                             _LOGGER.info(
                                 "Connection subentry already exists: %s → %s. "
@@ -409,13 +403,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                                 station.standard_name,
                             )
                             hass.config_entries.async_add_subentry(entry, subentry)
-                            # Find and reload newly created subentry
-                            for subentry_id, sub in entry.subentries.items():
-                                if sub.unique_id == unique_id:
-                                    await hass.config_entries.async_reload(
-                                        subentry_id
-                                    )
-                                    break
+                            # Home Assistant will automatically set up the new subentry
                         else:
                             _LOGGER.info(
                                 "Liveboard subentry already exists for "
@@ -455,11 +443,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                             station.standard_name,
                         )
                         hass.config_entries.async_add_subentry(entry, subentry)
-                        # Find and reload newly created subentry
-                        for subentry_id, sub in entry.subentries.items():
-                            if sub.unique_id == unique_id:
-                                await hass.config_entries.async_reload(subentry_id)
-                                break
+                        # Home Assistant will automatically set up the new subentry
                     else:
                         _LOGGER.info(
                             "Liveboard subentry already exists for station: %s. "
