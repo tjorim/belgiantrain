@@ -41,7 +41,16 @@
         },
         "abort": {
             "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
+            "single_instance_allowed": "[%key:common::config_flow::abort::single_instance_allowed%]",
             "api_unavailable": "The iRail API is currently unavailable. Please try again later."
+        }
+    },
+    "selector": {
+        "subentry_type": {
+            "options": {
+                "connection": "Monitor travel time between two stations",
+                "liveboard": "Monitor departures from a station"
+            }
         }
     },
     "subentry": {

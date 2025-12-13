@@ -41,7 +41,16 @@
         },
         "abort": {
             "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
+            "single_instance_allowed": "[%key:common::config_flow::abort::single_instance_allowed%]",
             "api_unavailable": "L'API iRail est actuellement indisponible. Veuillez réessayer plus tard."
+        }
+    },
+    "selector": {
+        "subentry_type": {
+            "options": {
+                "connection": "Surveiller le temps de trajet entre deux gares",
+                "liveboard": "Surveiller les départs depuis une gare"
+            }
         }
     },
     "subentry": {
