@@ -375,54 +375,48 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                         await coordinator.async_config_entry_first_refresh()
                         hass.data[DOMAIN]["coordinators"][entry.entry_id] = coordinator
 
-                    # Create liveboard subentries if requested (only for HA 2025.2+)
-                    # For older versions, liveboards will be created as disabled sensors
-                    # by the legacy code path in sensor.py
-                    if (
-                        "liveboards_to_add" in entry.data
-                        and _ConfigSubentry is not None
-                    ):
-                        # Use set to ensure unique station IDs
-                        unique_station_ids = set(entry.data["liveboards_to_add"])
-                        for station_id in unique_station_ids:
-                            station = find_station(hass, station_id)
-                            if station:
-                                unique_id = f"liveboard_{station_id}"
-                                # Check if subentry already exists
-                                subentry_exists = any(
-                                    sub.unique_id == unique_id
-                                    for sub in entry.subentries.values()
-                                )
-                                if not subentry_exists:
-                                    liveboard_data = {CONF_STATION_LIVE: station_id}
-                                    subentry = _ConfigSubentry(
-                                        data=MappingProxyType(liveboard_data),
-                                        unique_id=unique_id,
-                                        subentry_type=SUBENTRY_TYPE_LIVEBOARD,
-                                        title=f"Liveboard - {station.standard_name}",
+            # Create liveboard subentries if requested (for any entry type)
+            # This handles liveboards_to_add whether from connection or standalone
+            if "liveboards_to_add" in entry.data and _ConfigSubentry is not None:
+                # Use set to ensure unique station IDs
+                unique_station_ids = set(entry.data["liveboards_to_add"])
+                for station_id in unique_station_ids:
+                    station = find_station(hass, station_id)
+                    if station:
+                        unique_id = f"liveboard_{station_id}"
+                        # Check if subentry already exists
+                        subentry_exists = any(
+                            sub.unique_id == unique_id
+                            for sub in entry.subentries.values()
+                        )
+                        if not subentry_exists:
+                            liveboard_data = {CONF_STATION_LIVE: station_id}
+                            subentry = _ConfigSubentry(
+                                data=MappingProxyType(liveboard_data),
+                                unique_id=unique_id,
+                                subentry_type=SUBENTRY_TYPE_LIVEBOARD,
+                                title=f"Liveboard - {station.standard_name}",
+                            )
+                            _LOGGER.debug(
+                                "Creating liveboard subentry for station: %s",
+                                station.standard_name,
+                            )
+                            hass.config_entries.async_add_subentry(entry, subentry)
+                        else:
+                            _LOGGER.info(
+                                "Liveboard subentry already exists for "
+                                "station: %s. Reloading to ensure setup.",
+                                station.standard_name,
+                            )
+                            # Find and reload the existing subentry
+                            for subentry_id, sub in entry.subentries.items():
+                                if sub.unique_id == unique_id:
+                                    await hass.config_entries.async_reload(
+                                        subentry_id
                                     )
-                                    _LOGGER.debug(
-                                        "Creating liveboard subentry for station: %s",
-                                        station.standard_name,
-                                    )
-                                    hass.config_entries.async_add_subentry(
-                                        entry, subentry
-                                    )
-                                else:
-                                    _LOGGER.info(
-                                        "Liveboard subentry already exists for "
-                                        "station: %s. Reloading to ensure setup.",
-                                        station.standard_name,
-                                    )
-                                    # Find and reload the existing subentry
-                                    for subentry_id, sub in entry.subentries.items():
-                                        if sub.unique_id == unique_id:
-                                            await hass.config_entries.async_reload(
-                                                subentry_id
-                                            )
-                                            break
+                                    break
 
-            elif "first_liveboard" in entry.data:
+            if "first_liveboard" in entry.data:
                 # Create a liveboard subentry from the initial setup
                 liveboard_data = entry.data["first_liveboard"]
                 station_id = liveboard_data[CONF_STATION_LIVE]
