@@ -1,0 +1,89 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "NMBS/SNCB-Integration einrichten",
+                "description": "Wählen Sie aus, was Sie überwachen möchten",
+                "menu_options": {
+                    "connection": "Reisezeit zwischen zwei Bahnhöfen überwachen",
+                    "liveboard": "Abfahrten von einem Bahnhof überwachen"
+                }
+            },
+            "connection": {
+                "title": "Verbindung hinzufügen",
+                "description": "Reisezeit zwischen zwei Bahnhöfen überwachen",
+                "data": {
+                    "station_from": "Abfahrtsbahnhof",
+                    "station_to": "Ankunftsbahnhof",
+                    "exclude_vias": "Verbindungen mit Umstieg ausschließen",
+                    "show_on_map": "Auf Karte anzeigen"
+                }
+            },
+            "connection_liveboards": {
+                "title": "Anzeigetafeln hinzufügen?",
+                "description": "Auch Abfahrten von diesen Bahnhöfen überwachen?\n\nAbfahrt: {departure_station}\nAnkunft: {arrival_station}",
+                "data": {
+                    "add_departure_liveboard": "Abfahrten von {departure_station} überwachen",
+                    "add_arrival_liveboard": "Abfahrten von {arrival_station} überwachen"
+                }
+            },
+            "liveboard": {
+                "title": "Anzeigetafel hinzufügen",
+                "description": "Abfahrten von einem Bahnhof überwachen",
+                "data": {
+                    "station_live": "Bahnhof"
+                }
+            }
+        },
+        "error": {
+            "same_station": "Abfahrts- und Ankunftsbahnhöfe müssen unterschiedlich sein",
+            "invalid_station": "Ungültige Bahnhofsauswahl. Bitte versuchen Sie es erneut."
+        },
+        "abort": {
+            "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
+            "api_unavailable": "Die iRail-API ist derzeit nicht verfügbar. Bitte versuchen Sie es später erneut."
+        }
+    },
+    "subentry": {
+        "connection": {
+            "step": {
+                "user": {
+                    "title": "Verbindungssensor hinzufügen",
+                    "description": "Reisezeit zwischen zwei Bahnhöfen überwachen",
+                    "data": {
+                        "station_from": "Abfahrtsbahnhof",
+                        "station_to": "Ankunftsbahnhof",
+                        "exclude_vias": "Verbindungen mit Umstieg ausschließen",
+                        "show_on_map": "Auf Karte anzeigen"
+                    }
+                }
+            },
+            "error": {
+                "same_station": "Abfahrts- und Ankunftsbahnhöfe müssen unterschiedlich sein",
+                "invalid_station": "Ungültige Bahnhofsauswahl. Bitte versuchen Sie es erneut."
+            },
+            "abort": {
+                "already_configured": "Diese Verbindung ist bereits konfiguriert",
+                "api_unavailable": "Die iRail-API ist derzeit nicht verfügbar. Bitte versuchen Sie es später erneut."
+            }
+        },
+        "liveboard": {
+            "step": {
+                "user": {
+                    "title": "Anzeigetafelsensor hinzufügen",
+                    "description": "Abfahrten von einem Bahnhof überwachen",
+                    "data": {
+                        "station_live": "Bahnhof"
+                    }
+                }
+            },
+            "error": {
+                "invalid_station": "Ungültige Bahnhofsauswahl. Bitte versuchen Sie es erneut."
+            },
+            "abort": {
+                "already_configured": "Dieser Bahnhof ist bereits als Anzeigetafel konfiguriert",
+                "api_unavailable": "Die iRail-API ist derzeit nicht verfügbar. Bitte versuchen Sie es später erneut."
+            }
+        }
+    }
+}

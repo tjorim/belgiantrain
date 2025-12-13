@@ -1,0 +1,89 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Configurer l'intégration SNCB/NMBS",
+                "description": "Choisissez ce que vous voulez surveiller",
+                "menu_options": {
+                    "connection": "Surveiller le temps de trajet entre deux gares",
+                    "liveboard": "Surveiller les départs depuis une gare"
+                }
+            },
+            "connection": {
+                "title": "Ajouter une connexion",
+                "description": "Surveiller le temps de trajet entre deux gares",
+                "data": {
+                    "station_from": "Gare de départ",
+                    "station_to": "Gare d'arrivée",
+                    "exclude_vias": "Exclure les connexions avec correspondance",
+                    "show_on_map": "Afficher sur la carte"
+                }
+            },
+            "connection_liveboards": {
+                "title": "Ajouter des tableaux de départs?",
+                "description": "Surveiller également les départs depuis ces gares?\n\nDépart: {departure_station}\nArrivée: {arrival_station}",
+                "data": {
+                    "add_departure_liveboard": "Surveiller les départs depuis {departure_station}",
+                    "add_arrival_liveboard": "Surveiller les départs depuis {arrival_station}"
+                }
+            },
+            "liveboard": {
+                "title": "Ajouter un tableau de départs",
+                "description": "Surveiller les départs depuis une gare",
+                "data": {
+                    "station_live": "Gare"
+                }
+            }
+        },
+        "error": {
+            "same_station": "Les gares de départ et d'arrivée doivent être différentes",
+            "invalid_station": "Sélection de gare invalide. Veuillez réessayer."
+        },
+        "abort": {
+            "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
+            "api_unavailable": "L'API iRail est actuellement indisponible. Veuillez réessayer plus tard."
+        }
+    },
+    "subentry": {
+        "connection": {
+            "step": {
+                "user": {
+                    "title": "Ajouter un capteur de connexion",
+                    "description": "Surveiller le temps de trajet entre deux gares",
+                    "data": {
+                        "station_from": "Gare de départ",
+                        "station_to": "Gare d'arrivée",
+                        "exclude_vias": "Exclure les connexions avec correspondance",
+                        "show_on_map": "Afficher sur la carte"
+                    }
+                }
+            },
+            "error": {
+                "same_station": "Les gares de départ et d'arrivée doivent être différentes",
+                "invalid_station": "Sélection de gare invalide. Veuillez réessayer."
+            },
+            "abort": {
+                "already_configured": "Cette connexion est déjà configurée",
+                "api_unavailable": "L'API iRail est actuellement indisponible. Veuillez réessayer plus tard."
+            }
+        },
+        "liveboard": {
+            "step": {
+                "user": {
+                    "title": "Ajouter un capteur de tableau de départs",
+                    "description": "Surveiller les départs depuis une gare",
+                    "data": {
+                        "station_live": "Gare"
+                    }
+                }
+            },
+            "error": {
+                "invalid_station": "Sélection de gare invalide. Veuillez réessayer."
+            },
+            "abort": {
+                "already_configured": "Cette gare est déjà configurée comme tableau de départs",
+                "api_unavailable": "L'API iRail est actuellement indisponible. Veuillez réessayer plus tard."
+            }
+        }
+    }
+}

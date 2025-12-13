@@ -416,6 +416,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                     )
                     await coordinator.async_config_entry_first_refresh()
                     hass.data[DOMAIN]["coordinators"][entry.entry_id] = coordinator
+                else:
+                    _LOGGER.error(
+                        "Could not find station with id '%s' for liveboard setup. "
+                        "Aborting entry setup.",
+                        station_id,
+                    )
+                    return False
 
             # For HA 2025.2+: Main entry enables subentries (no platforms)
             # For HA < 2025.2: Main entry has coordinator and needs platforms
@@ -425,12 +432,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                     "(subentries will load separately)"
                 )
                 return True
+
             # Fallback: Set up platforms for the main entry (HA < 2025.2)
-            _LOGGER.info(
-                "Setting up platforms for main entry (Home Assistant < 2025.2)"
+            # Only forward platforms if a coordinator was actually created
+            if entry.entry_id in hass.data[DOMAIN]["coordinators"]:
+                _LOGGER.info(
+                    "Setting up platforms for main entry (Home Assistant < 2025.2)"
+                )
+                await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+                return True
+
+            _LOGGER.error(
+                "No coordinator created for entry. "
+                "This may indicate missing or invalid initial data."
             )
-            await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-            return True
+            return False
 
     # Check if this is a subentry for a standalone liveboard
     if subentry_type == SUBENTRY_TYPE_LIVEBOARD:

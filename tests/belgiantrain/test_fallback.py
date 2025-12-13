@@ -2,10 +2,10 @@
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.belgiantrain import async_setup_entry
 from custom_components.belgiantrain.const import (
     CONF_EXCLUDE_VIAS,
     CONF_STATION_FROM,
@@ -14,7 +14,6 @@ from custom_components.belgiantrain.const import (
 )
 
 
-@pytest.mark.asyncio
 async def test_connection_fallback_for_old_ha_versions(hass: HomeAssistant) -> None:
     """Test that connections work on Home Assistant < 2025.2."""
     # Mock station data
@@ -71,9 +70,7 @@ async def test_connection_fallback_for_old_ha_versions(hass: HomeAssistant) -> N
             mock_api.get_liveboard.return_value = mock_liveboard
             mock_irail.return_value = mock_api
 
-            # Import and run setup
-            from custom_components.belgiantrain import async_setup_entry
-
+            # Run setup
             result = await async_setup_entry(hass, entry)
 
             # Verify setup succeeded
@@ -90,7 +87,6 @@ async def test_connection_fallback_for_old_ha_versions(hass: HomeAssistant) -> N
             assert CONF_STATION_TO in entry.data
 
 
-@pytest.mark.asyncio
 async def test_liveboard_fallback_for_old_ha_versions(hass: HomeAssistant) -> None:
     """Test that liveboards work on Home Assistant < 2025.2."""
     # Mock station data
@@ -129,9 +125,7 @@ async def test_liveboard_fallback_for_old_ha_versions(hass: HomeAssistant) -> No
             mock_api.get_liveboard.return_value = mock_liveboard
             mock_irail.return_value = mock_api
 
-            # Import and run setup
-            from custom_components.belgiantrain import async_setup_entry
-
+            # Run setup
             result = await async_setup_entry(hass, entry)
 
             # Verify setup succeeded
