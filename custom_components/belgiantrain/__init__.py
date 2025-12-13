@@ -306,10 +306,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                 if station_from and station_to:
                     await hass.config_entries.async_add_subentry(
                         entry,
-                        title=(
-                            f"Connection: {station_from.standard_name} → "
-                            f"{station_to.standard_name}"
-                        ),
                         data=connection_data,
                         unique_id=f"connection_{station_from_id}_{station_to_id}{vias}",
                         subentry_type=SUBENTRY_TYPE_CONNECTION,
@@ -324,7 +320,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                             if station:
                                 await hass.config_entries.async_add_subentry(
                                     entry,
-                                    title=f"Liveboard - {station.standard_name}",
                                     data={CONF_STATION_LIVE: station_id},
                                     unique_id=f"liveboard_{station_id}",
                                     subentry_type=SUBENTRY_TYPE_LIVEBOARD,
@@ -339,7 +334,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                 if station:
                     await hass.config_entries.async_add_subentry(
                         entry,
-                        title=f"Liveboard - {station.standard_name}",
                         data=liveboard_data,
                         unique_id=f"liveboard_{station_id}",
                         subentry_type=SUBENTRY_TYPE_LIVEBOARD,
