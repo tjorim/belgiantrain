@@ -432,7 +432,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                     "(subentries will load separately)"
                 )
                 return True
-
             # Fallback: Set up platforms for the main entry (HA < 2025.2)
             # Only forward platforms if a coordinator was actually created
             if entry.entry_id in hass.data[DOMAIN]["coordinators"]:
@@ -441,7 +440,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                 )
                 await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
                 return True
-
             _LOGGER.error(
                 "No coordinator created for entry. "
                 "This may indicate missing or invalid initial data."
