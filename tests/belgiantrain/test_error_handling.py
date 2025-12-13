@@ -102,7 +102,7 @@ async def test_coordinator_raises_update_failed_on_connection_error(
     # Simulate API returning None (connection error)
     mock_api.get_connections.return_value = None
     # Mock other required API calls
-    mock_api.get_liveboard.return_value = MagicMock()
+    mock_api.get_liveboard.return_value = AsyncMock()
 
     from custom_components.belgiantrain.coordinator import (
         BelgianTrainDataUpdateCoordinator,
@@ -193,9 +193,7 @@ async def test_async_setup_entry_same_station_error(
     }
     mock_entry.entry_id = "test_entry"
     mock_entry.runtime_data = None
-
-    # Mock subentry_type attribute for backward compatibility check
-    type(mock_entry).subentry_type = None
+    mock_entry.subentry_type = None
 
     from custom_components.belgiantrain import async_setup_entry
 
@@ -293,9 +291,7 @@ async def test_async_setup_entry_station_not_found(
     }
     mock_entry.entry_id = "test_entry"
     mock_entry.runtime_data = None
-
-    # Mock subentry_type attribute for backward compatibility check
-    type(mock_entry).subentry_type = None
+    mock_entry.subentry_type = None
 
     from custom_components.belgiantrain import async_setup_entry
 
@@ -327,9 +323,7 @@ async def test_async_setup_entry_liveboard_station_not_found(
     }
     mock_entry.entry_id = "test_entry"
     mock_entry.runtime_data = None
-
-    # Mock subentry_type attribute for backward compatibility check
-    type(mock_entry).subentry_type = None
+    mock_entry.subentry_type = None
 
     from custom_components.belgiantrain import async_setup_entry
 
