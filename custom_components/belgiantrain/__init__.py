@@ -468,6 +468,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
             # For HA 2025.2+: Main entry enables subentries (no platforms)
             # For HA < 2025.2: Main entry has coordinator and needs platforms
             if _ConfigSubentry is not None:
+                # Clean up first_connection/first_liveboard data once created
+                # This prevents trying to create them again on restarts
+                if "first_connection" in entry.data or "first_liveboard" in entry.data:
+                    new_data = {
+                        k: v
+                        for k, v in entry.data.items()
+                        if k not in ("first_connection", "first_liveboard")
+                    }
+                    hass.config_entries.async_update_entry(entry, data=new_data)
+                    _LOGGER.debug(
+                        "Cleaned up initial setup data from main entry"
+                    )
                 _LOGGER.info(
                     "Main SNCB/NMBS integration entry set up successfully "
                     "(subentries will load separately)"
