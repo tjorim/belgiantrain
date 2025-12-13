@@ -1,5 +1,7 @@
 """Test error handling scenarios for the SNCB/NMBS integration."""
 
+# ruff: noqa: ANN001, PLC0415, SLF001
+
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -17,7 +19,7 @@ from custom_components.belgiantrain.const import (
 
 
 @pytest.fixture
-def mock_stations():
+def mock_stations() -> list[MagicMock]:
     """Create mock station data."""
     mock_station_1 = MagicMock()
     mock_station_1.id = "BE.NMBS.008812005"
@@ -93,7 +95,7 @@ async def test_async_setup_entry_invalid_station_data(hass: HomeAssistant) -> No
 async def test_coordinator_raises_update_failed_on_connection_error(
     hass: HomeAssistant, mock_stations
 ) -> None:
-    """Test that coordinator raises UpdateFailed when API returns None for connections."""
+    """Test coordinator raises UpdateFailed when API returns None."""
     hass.data[DOMAIN] = {"stations": mock_stations, "coordinators": {}}
 
     mock_api = AsyncMock()
@@ -172,7 +174,7 @@ async def test_coordinator_raises_update_failed_on_api_exception(
 async def test_async_setup_entry_same_station_error(
     hass: HomeAssistant, mock_stations
 ) -> None:
-    """Test that async_setup_entry returns False when from and to stations are the same."""
+    """Test async_setup_entry returns False with same station."""
     # Initialize station data properly
     hass.data[DOMAIN] = {
         "stations": mock_stations,
