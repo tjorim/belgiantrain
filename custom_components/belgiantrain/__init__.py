@@ -272,7 +272,7 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:  # noqa
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  # noqa: PLR0911, PLR0912, PLR0915
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  # noqa: PLR0911, PLR0912, PLR0915, C901
     """Set up SNCB/NMBS from a config entry."""
     # Ensure station data exists before setting up platforms
     domain_data = hass.data.get(DOMAIN)
@@ -345,11 +345,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                             )
                             hass.config_entries.async_add_subentry(entry, subentry)
                         else:
-                            _LOGGER.debug(
-                                "Connection subentry already exists: %s → %s",
+                            _LOGGER.info(
+                                "Connection subentry already exists: %s → %s. "
+                                "Reloading subentry to ensure it's set up.",
                                 station_from.standard_name,
                                 station_to.standard_name,
                             )
+                            # Find and reload the existing subentry
+                            for subentry_id, subentry in entry.subentries.items():
+                                if subentry.unique_id == unique_id:
+                                    await hass.config_entries.async_reload(subentry_id)
+                                    break
                     else:
                         # Fallback for HA < 2025.2: Create coordinator and setup
                         _LOGGER.info(
@@ -403,11 +409,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                                         entry, subentry
                                     )
                                 else:
-                                    _LOGGER.debug(
+                                    _LOGGER.info(
                                         "Liveboard subentry already exists for "
-                                        "station: %s",
+                                        "station: %s. Reloading to ensure setup.",
                                         station.standard_name,
                                     )
+                                    # Find and reload the existing subentry
+                                    for subentry_id, sub in entry.subentries.items():
+                                        if sub.unique_id == unique_id:
+                                            await hass.config_entries.async_reload(
+                                                subentry_id
+                                            )
+                                            break
 
             elif "first_liveboard" in entry.data:
                 # Create a liveboard subentry from the initial setup
@@ -435,10 +448,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                         )
                         hass.config_entries.async_add_subentry(entry, subentry)
                     else:
-                        _LOGGER.debug(
-                            "Liveboard subentry already exists for station: %s",
+                        _LOGGER.info(
+                            "Liveboard subentry already exists for station: %s. "
+                            "Reloading to ensure setup.",
                             station.standard_name,
                         )
+                        # Find and reload the existing subentry
+                        for subentry_id, sub in entry.subentries.items():
+                            if sub.unique_id == unique_id:
+                                await hass.config_entries.async_reload(subentry_id)
+                                break
                 elif station:
                     # Fallback for HA < 2025.2: Create coordinator and setup
                     _LOGGER.info(
