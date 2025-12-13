@@ -272,8 +272,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
         _LOGGER.error("Station data is missing or invalid; cannot set up platforms.")
         return False
 
+    # Cache subentry_type for backward compatibility with HA < 2025.2
+    subentry_type = getattr(entry, "subentry_type", None)
+
     # Check if this is the main integration entry (no subentry type)
-    if entry.subentry_type is None:
+    if subentry_type is None:
         # Check if this is a legacy connection entry (has CONF_STATION_FROM/TO directly)
         # If so, skip this block and let it be handled by legacy support code below
         is_legacy_connection = (
@@ -347,7 +350,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
             return True
 
     # Check if this is a subentry for a standalone liveboard
-    if entry.subentry_type == SUBENTRY_TYPE_LIVEBOARD:
+    if subentry_type == SUBENTRY_TYPE_LIVEBOARD:
         # Get station from config entry
         station = find_station(hass, entry.data[CONF_STATION_LIVE])
 
@@ -372,7 +375,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
         return True
 
     # Check if this is a subentry for a connection
-    if entry.subentry_type == SUBENTRY_TYPE_CONNECTION:
+    if subentry_type == SUBENTRY_TYPE_CONNECTION:
         # Get stations from config entry
         station_from = find_station(hass, entry.data[CONF_STATION_FROM])
         station_to = find_station(hass, entry.data[CONF_STATION_TO])
