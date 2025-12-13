@@ -41,7 +41,7 @@ async def async_get_config_entry_diagnostics(
                 "subentry_type": subentry_type,
                 "title": subentry.title,
                 "data": dict(subentry.data),
-                "disabled_by": subentry.disabled_by,
+                "disabled_by": getattr(subentry, "disabled_by", None),
                 "state": subentry.state.value if subentry.state else None,
             }
 
