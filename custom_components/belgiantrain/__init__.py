@@ -3,12 +3,20 @@
 from __future__ import annotations
 
 import logging
+from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 from homeassistant.const import Platform
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from pyrail import iRail
+
+# ConfigSubentry is only available in Home Assistant 2025.2+
+try:
+    from homeassistant.config_entries import ConfigSubentry
+except ImportError:
+    # Fallback for older versions - this won't be used but prevents import errors
+    ConfigSubentry = None  # type: ignore[misc,assignment]
 
 from .const import (
     CONF_EXCLUDE_VIAS,
@@ -304,26 +312,39 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                 station_to = find_station(hass, station_to_id)
 
                 if station_from and station_to:
-                    await hass.config_entries.async_add_subentry(
-                        entry,
-                        data=connection_data,
-                        unique_id=f"connection_{station_from_id}_{station_to_id}{vias}",
-                        subentry_type=SUBENTRY_TYPE_CONNECTION,
-                    )
+                    # Create ConfigSubentry object for HA 2025.2+
+                    if ConfigSubentry is not None:
+                        subentry = ConfigSubentry(
+                            data=MappingProxyType(connection_data),
+                            unique_id=f"connection_{station_from_id}_{station_to_id}{vias}",
+                            subentry_type=SUBENTRY_TYPE_CONNECTION,
+                            title=(
+                                f"Connection: {station_from.standard_name} → "
+                                f"{station_to.standard_name}"
+                            ),
+                        )
+                        hass.config_entries.async_add_subentry(entry, subentry)
+                    else:
+                        _LOGGER.warning(
+                            "ConfigSubentry not available. "
+                            "Home Assistant 2025.2+ required for subentry support."
+                        )
 
                     # Create liveboard subentries if requested
-                    if "liveboards_to_add" in entry.data:
+                    if "liveboards_to_add" in entry.data and ConfigSubentry is not None:
                         # Use set to ensure unique station IDs
                         unique_station_ids = set(entry.data["liveboards_to_add"])
                         for station_id in unique_station_ids:
                             station = find_station(hass, station_id)
                             if station:
-                                await hass.config_entries.async_add_subentry(
-                                    entry,
-                                    data={CONF_STATION_LIVE: station_id},
+                                liveboard_data = {CONF_STATION_LIVE: station_id}
+                                subentry = ConfigSubentry(
+                                    data=MappingProxyType(liveboard_data),
                                     unique_id=f"liveboard_{station_id}",
                                     subentry_type=SUBENTRY_TYPE_LIVEBOARD,
+                                    title=f"Liveboard - {station.standard_name}",
                                 )
+                                hass.config_entries.async_add_subentry(entry, subentry)
 
             elif "first_liveboard" in entry.data:
                 # Create a liveboard subentry from the initial setup
@@ -331,12 +352,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                 station_id = liveboard_data[CONF_STATION_LIVE]
                 station = find_station(hass, station_id)
 
-                if station:
-                    await hass.config_entries.async_add_subentry(
-                        entry,
-                        data=liveboard_data,
+                if station and ConfigSubentry is not None:
+                    subentry = ConfigSubentry(
+                        data=MappingProxyType(liveboard_data),
                         unique_id=f"liveboard_{station_id}",
                         subentry_type=SUBENTRY_TYPE_LIVEBOARD,
+                        title=f"Liveboard - {station.standard_name}",
+                    )
+                    hass.config_entries.async_add_subentry(entry, subentry)
+                elif station:
+                    _LOGGER.warning(
+                        "ConfigSubentry not available. "
+                        "Home Assistant 2025.2+ required for subentry support."
                     )
 
             # Main entry enables subentries
