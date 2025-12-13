@@ -36,13 +36,14 @@ async def async_get_config_entry_diagnostics(
     if hasattr(entry, "subentries"):
         for subentry_id, subentry in entry.subentries.items():
             subentry_type = getattr(subentry, "subentry_type", None)
+            subentry_state = getattr(subentry, "state", None)
             diagnostics_data["subentries"][subentry_id] = {
                 "unique_id": subentry.unique_id,
                 "subentry_type": subentry_type,
                 "title": subentry.title,
                 "data": dict(subentry.data),
                 "disabled_by": getattr(subentry, "disabled_by", None),
-                "state": subentry.state.value if subentry.state else None,
+                "state": subentry_state.value if subentry_state else None,
             }
 
     # Add coordinator information
