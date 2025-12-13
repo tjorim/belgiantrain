@@ -18,22 +18,6 @@ from custom_components.belgiantrain.const import (
 )
 
 
-@pytest.fixture
-def mock_stations() -> list[MagicMock]:
-    """Create mock station data."""
-    mock_station_1 = MagicMock()
-    mock_station_1.id = "BE.NMBS.008812005"
-    mock_station_1.standard_name = "Brussels-Central"
-    mock_station_1.name = "Brussels-Central"
-
-    mock_station_2 = MagicMock()
-    mock_station_2.id = "BE.NMBS.008892007"
-    mock_station_2.standard_name = "Ghent-Sint-Pieters"
-    mock_station_2.name = "Ghent-Sint-Pieters"
-
-    return [mock_station_1, mock_station_2]
-
-
 async def test_async_setup_api_failure(hass: HomeAssistant) -> None:
     """Test that async_setup returns False when API fails to fetch stations."""
     with patch("custom_components.belgiantrain.iRail") as mock_irail:
@@ -272,7 +256,9 @@ async def test_service_get_vehicle_handles_not_found(hass: HomeAssistant) -> Non
 async def test_async_setup_entry_station_not_found(
     hass: HomeAssistant, mock_stations
 ) -> None:
-    """Test that async_setup_entry handles station not found gracefully."""
+    """Test that async_setup_entry returns False when station not found."""
+    from custom_components.belgiantrain.const import SUBENTRY_TYPE_CONNECTION
+
     # Initialize station data properly with stations
     hass.data[DOMAIN] = {
         "stations": mock_stations,
@@ -281,32 +267,31 @@ async def test_async_setup_entry_station_not_found(
     }
 
     mock_entry = MagicMock(spec=ConfigEntry)
-    # Create connection data with non-existent station ID
+    # Create connection subentry data with non-existent station ID
     mock_entry.data = {
-        "first_connection": {
-            CONF_STATION_FROM: "BE.NMBS.999999999",  # Non-existent station
-            CONF_STATION_TO: "BE.NMBS.008892007",
-            CONF_EXCLUDE_VIAS: False,
-        }
+        CONF_STATION_FROM: "BE.NMBS.999999999",  # Non-existent station
+        CONF_STATION_TO: "BE.NMBS.008892007",
+        CONF_EXCLUDE_VIAS: False,
     }
     mock_entry.entry_id = "test_entry"
     mock_entry.runtime_data = None
-    mock_entry.subentry_type = None
+    mock_entry.subentry_type = SUBENTRY_TYPE_CONNECTION
 
     from custom_components.belgiantrain import async_setup_entry
 
-    # Should not create subentry when station is not found
-    # The function continues but doesn't create the subentry
+    # Should return False when station is not found for connection subentry
     result = await async_setup_entry(hass, mock_entry)
 
-    # Should return True but without creating entities (no platforms forwarded)
-    assert result is True
+    # Should return False when station not found
+    assert result is False
 
 
 async def test_async_setup_entry_liveboard_station_not_found(
     hass: HomeAssistant, mock_stations
 ) -> None:
-    """Test that async_setup_entry handles liveboard station not found gracefully."""
+    """Test that async_setup_entry returns False when liveboard station not found."""
+    from custom_components.belgiantrain.const import SUBENTRY_TYPE_LIVEBOARD
+
     # Initialize station data properly with stations
     hass.data[DOMAIN] = {
         "stations": mock_stations,
@@ -315,20 +300,18 @@ async def test_async_setup_entry_liveboard_station_not_found(
     }
 
     mock_entry = MagicMock(spec=ConfigEntry)
-    # Create liveboard data with non-existent station ID
+    # Create liveboard subentry data with non-existent station ID
     mock_entry.data = {
-        "first_liveboard": {
-            CONF_STATION_LIVE: "BE.NMBS.999999999",  # Non-existent station
-        }
+        CONF_STATION_LIVE: "BE.NMBS.999999999",  # Non-existent station
     }
     mock_entry.entry_id = "test_entry"
     mock_entry.runtime_data = None
-    mock_entry.subentry_type = None
+    mock_entry.subentry_type = SUBENTRY_TYPE_LIVEBOARD
 
     from custom_components.belgiantrain import async_setup_entry
 
-    # Should not create subentry when station is not found
+    # Should return False when station is not found for liveboard subentry
     result = await async_setup_entry(hass, mock_entry)
 
-    # Should return True but without creating entities
-    assert result is True
+    # Should return False when station not found
+    assert result is False
