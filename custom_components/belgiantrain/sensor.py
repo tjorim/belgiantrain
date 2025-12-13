@@ -77,11 +77,32 @@ async def async_setup_entry(
     # Cache subentry_type for backward compatibility with HA < 2025.2
     subentry_type = getattr(config_entry, "subentry_type", None)
 
-    # Skip setup for main integration entry (has initial setup data but no coordinator)
-    if subentry_type is None and set(config_entry.data.keys()).issubset(
-        {"first_connection", "first_liveboard", "liveboards_to_add"}
-    ):
-        return
+    _LOGGER.debug(
+        "Sensor setup for entry %s (subentry_type=%s, data=%s)",
+        config_entry.entry_id,
+        subentry_type,
+        config_entry.data,
+    )
+
+    # Skip setup for main integration entry (has ONLY initial setup data)
+    # This check allows entries with both initial AND station data
+    # (which happens in the HA < 2025.2 fallback path)
+    if subentry_type is None:
+        # Check if pure main entry (only first_* keys, no station keys)
+        has_only_initial_data = set(config_entry.data.keys()).issubset(
+            {"first_connection", "first_liveboard", "liveboards_to_add"}
+        )
+        has_station_data = (
+            CONF_STATION_FROM in config_entry.data
+            or CONF_STATION_LIVE in config_entry.data
+        )
+
+        if has_only_initial_data and not has_station_data:
+            _LOGGER.debug(
+                "Skipping sensor setup for main integration entry "
+                "(subentries will be set up separately)"
+            )
+            return
 
     # Get coordinator from hass.data
     domain_data = hass.data.get(DOMAIN, {})
@@ -95,8 +116,10 @@ async def async_setup_entry(
         )
         return
 
-    # Check if this is a subentry for a standalone liveboard
-    if subentry_type == SUBENTRY_TYPE_LIVEBOARD:
+    # Check if standalone liveboard subentry OR fallback main entry
+    if subentry_type == SUBENTRY_TYPE_LIVEBOARD or (
+        subentry_type is None and CONF_STATION_LIVE in config_entry.data
+    ):
         station = find_station(hass, config_entry.data[CONF_STATION_LIVE])
 
         if station is None:
@@ -107,6 +130,9 @@ async def async_setup_entry(
             return
 
         # Create standalone liveboard sensor (enabled by default)
+        _LOGGER.debug(
+            "Creating standalone liveboard sensor for station %s", station.standard_name
+        )
         async_add_entities([StandaloneLiveboardSensor(coordinator, station)])
         return
 
@@ -127,6 +153,11 @@ async def async_setup_entry(
         return
 
     # setup the connection sensor and liveboards
+    _LOGGER.debug(
+        "Creating connection sensor from %s to %s",
+        station_from.standard_name,
+        station_to.standard_name,
+    )
     entities = [
         NMBSSensor(coordinator, name, show_on_map, station_from, station_to, excl_vias),
     ]
@@ -134,6 +165,7 @@ async def async_setup_entry(
     # For legacy entries (no subentry_type), also create disabled liveboards
     # to maintain backward compatibility
     if subentry_type is None:
+        _LOGGER.debug("Also creating legacy liveboard sensors (disabled by default)")
         entities.extend(
             [
                 NMBSLiveBoard(
@@ -145,6 +177,7 @@ async def async_setup_entry(
             ]
         )
 
+    _LOGGER.debug("Adding %d entities to Home Assistant", len(entities))
     async_add_entities(entities)
 
 

@@ -1,0 +1,98 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "NMBS/SNCB-integratie instellen",
+                "description": "Kies wat u wilt monitoren",
+                "menu_options": {
+                    "connection": "Reistijd tussen twee stations monitoren",
+                    "liveboard": "Vertrekken vanaf een station monitoren"
+                }
+            },
+            "connection": {
+                "title": "Verbinding toevoegen",
+                "description": "Reistijd tussen twee stations monitoren",
+                "data": {
+                    "station_from": "Vertrekstation",
+                    "station_to": "Aankomststation",
+                    "exclude_vias": "Verbindingen met overstap uitsluiten",
+                    "show_on_map": "Tonen op kaart"
+                }
+            },
+            "connection_liveboards": {
+                "title": "Vertrekborden toevoegen?",
+                "description": "Ook vertrekken vanaf deze stations monitoren?\n\nVertrek: {departure_station}\nAankomst: {arrival_station}",
+                "data": {
+                    "add_departure_liveboard": "Vertrekken monitoren vanaf {departure_station}",
+                    "add_arrival_liveboard": "Vertrekken monitoren vanaf {arrival_station}"
+                }
+            },
+            "liveboard": {
+                "title": "Vertrekbord toevoegen",
+                "description": "Vertrekken vanaf een station monitoren",
+                "data": {
+                    "station_live": "Station"
+                }
+            }
+        },
+        "error": {
+            "same_station": "Vertrek- en aankomststations moeten verschillend zijn",
+            "invalid_station": "Ongeldige stationselectie. Probeer het opnieuw."
+        },
+        "abort": {
+            "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
+            "single_instance_allowed": "[%key:common::config_flow::abort::single_instance_allowed%]",
+            "api_unavailable": "De iRail API is momenteel niet beschikbaar. Probeer het later opnieuw."
+        }
+    },
+    "selector": {
+        "subentry_type": {
+            "options": {
+                "connection": "Reistijd tussen twee stations monitoren",
+                "liveboard": "Vertrekken vanaf een station monitoren"
+            }
+        }
+    },
+    "subentry": {
+        "connection": {
+            "step": {
+                "user": {
+                    "title": "Verbindingssensor toevoegen",
+                    "description": "Reistijd tussen twee stations monitoren",
+                    "data": {
+                        "station_from": "Vertrekstation",
+                        "station_to": "Aankomststation",
+                        "exclude_vias": "Verbindingen met overstap uitsluiten",
+                        "show_on_map": "Tonen op kaart"
+                    }
+                }
+            },
+            "error": {
+                "same_station": "Vertrek- en aankomststations moeten verschillend zijn",
+                "invalid_station": "Ongeldige stationselectie. Probeer het opnieuw."
+            },
+            "abort": {
+                "already_configured": "Deze verbinding is al geconfigureerd",
+                "api_unavailable": "De iRail API is momenteel niet beschikbaar. Probeer het later opnieuw."
+            }
+        },
+        "liveboard": {
+            "step": {
+                "user": {
+                    "title": "Vertrekbordsensor toevoegen",
+                    "description": "Vertrekken vanaf een station monitoren",
+                    "data": {
+                        "station_live": "Station"
+                    }
+                }
+            },
+            "error": {
+                "invalid_station": "Ongeldige stationselectie. Probeer het opnieuw."
+            },
+            "abort": {
+                "already_configured": "Dit station is al geconfigureerd als vertrekbord",
+                "api_unavailable": "De iRail API is momenteel niet beschikbaar. Probeer het later opnieuw."
+            }
+        }
+    }
+}
