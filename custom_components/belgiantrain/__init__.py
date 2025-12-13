@@ -282,6 +282,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
 
     # Cache subentry_type for backward compatibility with HA < 2025.2
     subentry_type = getattr(entry, "subentry_type", None)
+    _LOGGER.debug(
+        "Setting up entry %s (title=%s, subentry_type=%s, data=%s)",
+        entry.entry_id,
+        entry.title,
+        subentry_type,
+        entry.data,
+    )
 
     # Check if this is the main integration entry (no subentry type)
     if subentry_type is None:
@@ -325,12 +332,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                         )
                         hass.config_entries.async_add_subentry(entry, subentry)
                     else:
-                        _LOGGER.warning(
-                            "ConfigSubentry not available. "
-                            "Home Assistant 2025.2+ required for subentry support."
+                        # Fallback for HA < 2025.2: Create coordinator and setup
+                        _LOGGER.info(
+                            "ConfigSubentry not available (Home Assistant < 2025.2). "
+                            "Setting up connection directly in main entry."
                         )
+                        # Update entry data to include connection details
+                        hass.config_entries.async_update_entry(
+                            entry,
+                            data={**entry.data, **connection_data},
+                        )
+                        # Create API client and coordinator
+                        api_client = iRail(session=async_get_clientsession(hass))
+                        coordinator = BelgianTrainDataUpdateCoordinator(
+                            hass, api_client, station_from, station_to
+                        )
+                        await coordinator.async_config_entry_first_refresh()
+                        hass.data[DOMAIN]["coordinators"][entry.entry_id] = coordinator
 
-                    # Create liveboard subentries if requested
+                    # Create liveboard subentries if requested (only for HA 2025.2+)
+                    # For older versions, liveboards will be created as disabled sensors
+                    # by the legacy code path in sensor.py
                     if (
                         "liveboards_to_add" in entry.data
                         and _ConfigSubentry is not None
@@ -364,13 +386,37 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                     )
                     hass.config_entries.async_add_subentry(entry, subentry)
                 elif station:
-                    _LOGGER.warning(
-                        "ConfigSubentry not available. "
-                        "Home Assistant 2025.2+ required for subentry support."
+                    # Fallback for HA < 2025.2: Create coordinator and setup
+                    _LOGGER.info(
+                        "ConfigSubentry not available (Home Assistant < 2025.2). "
+                        "Setting up liveboard directly in main entry."
                     )
+                    # Update entry data to include liveboard details for direct setup
+                    hass.config_entries.async_update_entry(
+                        entry,
+                        data={**entry.data, **liveboard_data},
+                    )
+                    # Create API client and coordinator
+                    api_client = iRail(session=async_get_clientsession(hass))
+                    coordinator = LiveboardDataUpdateCoordinator(
+                        hass, api_client, station
+                    )
+                    await coordinator.async_config_entry_first_refresh()
+                    hass.data[DOMAIN]["coordinators"][entry.entry_id] = coordinator
 
-            # Main entry enables subentries
-            _LOGGER.info("Main SNCB/NMBS integration entry set up successfully")
+            # For HA 2025.2+: Main entry enables subentries (no platforms)
+            # For HA < 2025.2: Main entry has coordinator and needs platforms
+            if _ConfigSubentry is not None:
+                _LOGGER.info(
+                    "Main SNCB/NMBS integration entry set up successfully "
+                    "(subentries will load separately)"
+                )
+                return True
+            # Fallback: Set up platforms for the main entry (HA < 2025.2)
+            _LOGGER.info(
+                "Setting up platforms for main entry (Home Assistant < 2025.2)"
+            )
+            await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
             return True
 
     # Check if this is a subentry for a standalone liveboard
