@@ -25,6 +25,7 @@ from .coordinator import (
     BelgianTrainDataUpdateCoordinator,
     LiveboardDataUpdateCoordinator,
 )
+from .data import BelgianTrainData
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -371,9 +372,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                         # Create API client and coordinator
                         api_client = iRail(session=async_get_clientsession(hass))
                         coordinator = BelgianTrainDataUpdateCoordinator(
-                            hass, api_client, station_from, station_to
+                            hass, api_client, station_from, station_to, entry
                         )
                         await coordinator.async_config_entry_first_refresh()
+                        # Store in runtime_data and hass.data (backward compatibility)
+                        entry.runtime_data = BelgianTrainData(coordinator=coordinator)
                         hass.data[DOMAIN]["coordinators"][entry.entry_id] = coordinator
 
             # Create liveboard subentries if requested (for any entry type)
@@ -469,9 +472,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                     # Create API client and coordinator
                     api_client = iRail(session=async_get_clientsession(hass))
                     coordinator = LiveboardDataUpdateCoordinator(
-                        hass, api_client, station
+                        hass, api_client, station, entry
                     )
                     await coordinator.async_config_entry_first_refresh()
+                    # Store in runtime_data and hass.data (backward compatibility)
+                    entry.runtime_data = BelgianTrainData(coordinator=coordinator)
                     hass.data[DOMAIN]["coordinators"][entry.entry_id] = coordinator
                 else:
                     _LOGGER.error(
@@ -530,12 +535,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
 
         # Create API client and coordinator for liveboard
         api_client = iRail(session=async_get_clientsession(hass))
-        coordinator = LiveboardDataUpdateCoordinator(hass, api_client, station)
+        coordinator = LiveboardDataUpdateCoordinator(hass, api_client, station, entry)
 
         # Fetch initial data
         await coordinator.async_config_entry_first_refresh()
 
-        # Store coordinator
+        # Store in runtime_data and hass.data (backward compatibility)
+        entry.runtime_data = BelgianTrainData(coordinator=coordinator)
         hass.data[DOMAIN]["coordinators"][entry.entry_id] = coordinator
 
         _LOGGER.debug("Forwarding entry setup to platforms for liveboard subentry")
@@ -560,13 +566,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
         # Create API client and coordinator
         api_client = iRail(session=async_get_clientsession(hass))
         coordinator = BelgianTrainDataUpdateCoordinator(
-            hass, api_client, station_from, station_to
+            hass, api_client, station_from, station_to, entry
         )
 
         # Fetch initial data
         await coordinator.async_config_entry_first_refresh()
 
-        # Store coordinator
+        # Store in runtime_data and hass.data (backward compatibility)
+        entry.runtime_data = BelgianTrainData(coordinator=coordinator)
         hass.data[DOMAIN]["coordinators"][entry.entry_id] = coordinator
 
         _LOGGER.debug("Forwarding entry setup to platforms for connection subentry")
@@ -588,13 +595,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
     # Create API client and coordinator for legacy connection
     api_client = iRail(session=async_get_clientsession(hass))
     coordinator = BelgianTrainDataUpdateCoordinator(
-        hass, api_client, station_from, station_to
+        hass, api_client, station_from, station_to, entry
     )
 
     # Fetch initial data
     await coordinator.async_config_entry_first_refresh()
 
-    # Store coordinator
+    # Store in runtime_data and hass.data (backward compatibility)
+    entry.runtime_data = BelgianTrainData(coordinator=coordinator)
     hass.data[DOMAIN]["coordinators"][entry.entry_id] = coordinator
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
