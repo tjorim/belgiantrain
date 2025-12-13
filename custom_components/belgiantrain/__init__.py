@@ -330,6 +330,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                                 f"{station_to.standard_name}"
                             ),
                         )
+                        _LOGGER.debug(
+                            "Creating connection subentry: %s → %s",
+                            station_from.standard_name,
+                            station_to.standard_name,
+                        )
                         hass.config_entries.async_add_subentry(entry, subentry)
                     else:
                         # Fallback for HA < 2025.2: Create coordinator and setup
@@ -369,6 +374,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                                     subentry_type=SUBENTRY_TYPE_LIVEBOARD,
                                     title=f"Liveboard - {station.standard_name}",
                                 )
+                                _LOGGER.debug(
+                                    "Creating liveboard subentry for station: %s",
+                                    station.standard_name,
+                                )
                                 hass.config_entries.async_add_subentry(entry, subentry)
 
             elif "first_liveboard" in entry.data:
@@ -383,6 +392,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                         unique_id=f"liveboard_{station_id}",
                         subentry_type=SUBENTRY_TYPE_LIVEBOARD,
                         title=f"Liveboard - {station.standard_name}",
+                    )
+                    _LOGGER.debug(
+                        "Creating liveboard subentry for station: %s",
+                        station.standard_name,
                     )
                     hass.config_entries.async_add_subentry(entry, subentry)
                 elif station:
@@ -421,6 +434,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
 
     # Check if this is a subentry for a standalone liveboard
     if subentry_type == SUBENTRY_TYPE_LIVEBOARD:
+        _LOGGER.debug("Setting up liveboard subentry")
         # Get station from config entry
         station = find_station(hass, entry.data[CONF_STATION_LIVE])
 
@@ -441,11 +455,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
         # Store coordinator
         hass.data[DOMAIN]["coordinators"][entry.entry_id] = coordinator
 
+        _LOGGER.debug("Forwarding entry setup to platforms for liveboard subentry")
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
         return True
 
     # Check if this is a subentry for a connection
     if subentry_type == SUBENTRY_TYPE_CONNECTION:
+        _LOGGER.debug("Setting up connection subentry")
         # Get stations from config entry
         station_from = find_station(hass, entry.data[CONF_STATION_FROM])
         station_to = find_station(hass, entry.data[CONF_STATION_TO])
@@ -470,6 +486,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
         # Store coordinator
         hass.data[DOMAIN]["coordinators"][entry.entry_id] = coordinator
 
+        _LOGGER.debug("Forwarding entry setup to platforms for connection subentry")
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
         return True
 
@@ -505,9 +522,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
-    if unload_ok:
-        # Remove coordinator from hass.data if it exists
-        if DOMAIN in hass.data and "coordinators" in hass.data[DOMAIN]:
-            hass.data[DOMAIN]["coordinators"].pop(entry.entry_id, None)
+    # Remove coordinator from hass.data if it exists
+    if unload_ok and DOMAIN in hass.data and "coordinators" in hass.data[DOMAIN]:
+        hass.data[DOMAIN]["coordinators"].pop(entry.entry_id, None)
 
     return unload_ok

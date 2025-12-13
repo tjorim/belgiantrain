@@ -130,6 +130,9 @@ async def async_setup_entry(
             return
 
         # Create standalone liveboard sensor (enabled by default)
+        _LOGGER.debug(
+            "Creating standalone liveboard sensor for station %s", station.standard_name
+        )
         async_add_entities([StandaloneLiveboardSensor(coordinator, station)])
         return
 
@@ -150,6 +153,11 @@ async def async_setup_entry(
         return
 
     # setup the connection sensor and liveboards
+    _LOGGER.debug(
+        "Creating connection sensor from %s to %s",
+        station_from.standard_name,
+        station_to.standard_name,
+    )
     entities = [
         NMBSSensor(coordinator, name, show_on_map, station_from, station_to, excl_vias),
     ]
@@ -157,6 +165,7 @@ async def async_setup_entry(
     # For legacy entries (no subentry_type), also create disabled liveboards
     # to maintain backward compatibility
     if subentry_type is None:
+        _LOGGER.debug("Also creating legacy liveboard sensors (disabled by default)")
         entities.extend(
             [
                 NMBSLiveBoard(
@@ -168,6 +177,7 @@ async def async_setup_entry(
             ]
         )
 
+    _LOGGER.debug("Adding %d entities to Home Assistant", len(entities))
     async_add_entities(entities)
 
 
