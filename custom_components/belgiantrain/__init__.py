@@ -347,17 +347,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                             hass.config_entries.async_add_subentry(entry, subentry)
                             # Home Assistant will automatically set up the new subentry
                         else:
-                            _LOGGER.info(
-                                "Connection subentry already exists: %s → %s. "
-                                "Reloading subentry to ensure it's set up.",
+                            _LOGGER.debug(
+                                "Connection subentry already exists: %s → %s",
                                 station_from.standard_name,
                                 station_to.standard_name,
                             )
-                            # Find and reload the existing subentry
-                            for subentry_id, subentry in entry.subentries.items():
-                                if subentry.unique_id == unique_id:
-                                    await hass.config_entries.async_reload(subentry_id)
-                                    break
                     else:
                         # Fallback for HA < 2025.2: Create coordinator and setup
                         _LOGGER.info(
@@ -408,18 +402,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                             hass.config_entries.async_add_subentry(entry, subentry)
                             # Home Assistant will automatically set up the new subentry
                         else:
-                            _LOGGER.info(
-                                "Liveboard subentry already exists for "
-                                "station: %s. Reloading to ensure setup.",
+                            _LOGGER.debug(
+                                "Liveboard subentry already exists for station: %s",
                                 station.standard_name,
                             )
-                            # Find and reload the existing subentry
-                            for subentry_id, sub in entry.subentries.items():
-                                if sub.unique_id == unique_id:
-                                    await hass.config_entries.async_reload(
-                                        subentry_id
-                                    )
-                                    break
 
             if "first_liveboard" in entry.data:
                 # Create a liveboard subentry from the initial setup
@@ -448,16 +434,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                         hass.config_entries.async_add_subentry(entry, subentry)
                         # Home Assistant will automatically set up the new subentry
                     else:
-                        _LOGGER.info(
-                            "Liveboard subentry already exists for station: %s. "
-                            "Reloading to ensure setup.",
+                        _LOGGER.debug(
+                            "Liveboard subentry already exists for station: %s",
                             station.standard_name,
                         )
-                        # Find and reload the existing subentry
-                        for subentry_id, sub in entry.subentries.items():
-                            if sub.unique_id == unique_id:
-                                await hass.config_entries.async_reload(subentry_id)
-                                break
                 elif station:
                     # Fallback for HA < 2025.2: Create coordinator and setup
                     _LOGGER.info(
@@ -489,17 +469,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
             # For HA 2025.2+: Main entry enables subentries (no platforms)
             # For HA < 2025.2: Main entry has coordinator and needs platforms
             if _ConfigSubentry is not None:
-                # Clean up first_connection/first_liveboard data once created
+                # Clean up initial setup data once subentries are created
                 # This prevents trying to create them again on restarts
-                if "first_connection" in entry.data or "first_liveboard" in entry.data:
+                keys_to_remove = {
+                    "first_connection",
+                    "first_liveboard",
+                    "liveboards_to_add",
+                }
+                if any(key in entry.data for key in keys_to_remove):
                     new_data = {
                         k: v
                         for k, v in entry.data.items()
-                        if k not in ("first_connection", "first_liveboard")
+                        if k not in keys_to_remove
                     }
                     hass.config_entries.async_update_entry(entry, data=new_data)
                     _LOGGER.debug(
-                        "Cleaned up initial setup data from main entry"
+                        "Cleaned up initial setup data from main entry: %s",
+                        keys_to_remove & entry.data.keys(),
                     )
                 _LOGGER.info(
                     "Main SNCB/NMBS integration entry set up successfully "

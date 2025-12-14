@@ -32,8 +32,18 @@ class BelgianTrainEntity(
     ) -> None:
         """Initialize the entity."""
         super().__init__(coordinator)
+
+        # For subentries, use the parent entry's ID to group all entities under one device
+        # For main entry or legacy entries, use the entry's own ID
+        entry = coordinator.config_entry
+        device_entry_id = entry.entry_id
+
+        # Check if this is a subentry (has a parent)
+        if hasattr(entry, "parent_entry") and entry.parent_entry is not None:
+            device_entry_id = entry.parent_entry.entry_id
+
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, coordinator.config_entry.entry_id)},
+            identifiers={(DOMAIN, device_entry_id)},
             name="SNCB/NMBS",
             manufacturer="SNCB/NMBS",
             entry_type=DeviceEntryType.SERVICE,
