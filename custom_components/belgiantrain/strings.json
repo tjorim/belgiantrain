@@ -81,7 +81,8 @@
             },
             "abort": {
                 "already_configured": "This connection is already configured",
-                "api_unavailable": "The iRail API is currently unavailable. Please try again later."
+                "api_unavailable": "The iRail API is currently unavailable. Please try again later.",
+                "invalid_state": "Invalid state encountered. Please restart the configuration process."
             }
         },
         "liveboard": {

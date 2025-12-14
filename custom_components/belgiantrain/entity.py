@@ -33,7 +33,7 @@ class BelgianTrainEntity(
         """Initialize the entity."""
         super().__init__(coordinator)
 
-        # For subentries, use the parent entry's ID to group all entities under one device
+        # For subentries, use parent entry's ID to group entities
         # For main entry or legacy entries, use the entry's own ID
         entry = coordinator.config_entry
         device_entry_id = entry.entry_id

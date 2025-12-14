@@ -273,7 +273,7 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:  # noqa
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  # noqa: PLR0911, PLR0912, PLR0915, C901
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  # noqa: PLR0911, PLR0912, PLR0915
     """Set up SNCB/NMBS from a config entry."""
     # Ensure station data exists before setting up platforms
     domain_data = hass.data.get(DOMAIN)
@@ -477,6 +477,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                     "liveboards_to_add",
                 }
                 if any(key in entry.data for key in keys_to_remove):
+                    # Capture removed keys before modifying entry data
+                    removed_keys = keys_to_remove & entry.data.keys()
                     new_data = {
                         k: v
                         for k, v in entry.data.items()
@@ -485,7 +487,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                     hass.config_entries.async_update_entry(entry, data=new_data)
                     _LOGGER.debug(
                         "Cleaned up initial setup data from main entry: %s",
-                        keys_to_remove & entry.data.keys(),
+                        removed_keys,
                     )
                 _LOGGER.info(
                     "Main SNCB/NMBS integration entry set up successfully "
