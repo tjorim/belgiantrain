@@ -21,4 +21,5 @@ type BelgianTrainConfigEntry = ConfigEntry[BelgianTrainData]
 class BelgianTrainData:
     """Data for the Belgian Train integration."""
 
+    # Stores either a connection or liveboard coordinator instance for the config entry
     coordinator: BelgianTrainDataUpdateCoordinator | LiveboardDataUpdateCoordinator

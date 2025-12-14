@@ -104,15 +104,14 @@ async def async_setup_entry(
             )
             return
 
-    # Get coordinator from runtime_data if available, otherwise from hass.data (legacy)
-    coordinator = None
-    if hasattr(config_entry, "runtime_data") and config_entry.runtime_data:
-        coordinator = config_entry.runtime_data.coordinator
-    else:
-        # Fallback for legacy entries without runtime_data
-        domain_data = hass.data.get(DOMAIN, {})
-        coordinators = domain_data.get("coordinators", {})
-        coordinator = coordinators.get(config_entry.entry_id)
+    # Get coordinator from runtime_data if available, else from hass.data (legacy)
+    coordinator = (
+        config_entry.runtime_data.coordinator
+        if hasattr(config_entry, "runtime_data") and config_entry.runtime_data
+        else hass.data.get(DOMAIN, {})
+        .get("coordinators", {})
+        .get(config_entry.entry_id)
+    )
 
     if coordinator is None:
         _LOGGER.error(
