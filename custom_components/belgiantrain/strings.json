@@ -3,15 +3,15 @@
         "step": {
             "user": {
                 "title": "Set up SNCB/NMBS Integration",
-                "description": "Choose what you want to monitor",
+                "description": "Choose what you want to track first. You can add more connections and liveboards later.",
                 "menu_options": {
-                    "connection": "Monitor travel time between two stations",
-                    "liveboard": "Monitor departures from a station"
+                    "connection": "Connection - Travel time between two stations",
+                    "liveboard": "Liveboard - Departures from a station"
                 }
             },
             "connection": {
                 "title": "Add Connection",
-                "description": "Monitor travel time between two stations",
+                "description": "Track travel time and get details about the next train between two stations.",
                 "data": {
                     "station_from": "Departure station",
                     "station_to": "Arrival station",
@@ -29,7 +29,7 @@
             },
             "liveboard": {
                 "title": "Add Liveboard",
-                "description": "Monitor departures from a station",
+                "description": "Track upcoming train departures from a specific station.",
                 "data": {
                     "station_live": "Station"
                 }
@@ -57,13 +57,21 @@
         "connection": {
             "step": {
                 "user": {
-                    "title": "Add Connection Sensor",
-                    "description": "Monitor travel time between two stations",
+                    "title": "Add Connection",
+                    "description": "Track travel time and get details about the next train between two stations.",
                     "data": {
                         "station_from": "Departure station",
                         "station_to": "Arrival station",
                         "exclude_vias": "Exclude via connections",
                         "show_on_map": "Show on map"
+                    }
+                },
+                "liveboards": {
+                    "title": "Add Liveboards?",
+                    "description": "Also monitor departures from these stations?\n\nDeparture: {departure_station}\nArrival: {arrival_station}",
+                    "data": {
+                        "add_departure_liveboard": "Monitor departures from {departure_station}",
+                        "add_arrival_liveboard": "Monitor departures from {arrival_station}"
                     }
                 }
             },
@@ -79,8 +87,8 @@
         "liveboard": {
             "step": {
                 "user": {
-                    "title": "Add Liveboard Sensor",
-                    "description": "Monitor departures from a station",
+                    "title": "Add Liveboard",
+                    "description": "Track upcoming train departures from a specific station.",
                     "data": {
                         "station_live": "Station"
                     }

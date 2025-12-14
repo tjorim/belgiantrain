@@ -226,13 +226,20 @@ if ConfigSubentryFlow is not None:
     class ConnectionFlowHandler(ConfigSubentryFlow):
         """Handle subentry flow for connection sensors."""
 
+        def __init__(self) -> None:
+            """Initialize."""
+            self.connection_data: dict[str, Any] = {}
+            self.stations: list[StationDetails] = []
+            self.station_from: StationDetails | None = None
+            self.station_to: StationDetails | None = None
+
         async def async_step_user(  # noqa: PLR0911
             self, user_input: dict[str, Any] | None = None
         ) -> SubentryFlowResult:
             """Handle the step to setup a connection between 2 stations."""
             errors: dict = {}
 
-            if user_input is not None:
+            if user_input is not None and not self.connection_data:
                 if user_input[CONF_STATION_FROM] == user_input[CONF_STATION_TO]:
                     errors["base"] = "same_station"
                 else:
@@ -242,20 +249,20 @@ if ConfigSubentryFlow is not None:
                         stations_response = await api_client.get_stations()
                         if stations_response is None:
                             return self.async_abort(reason="api_unavailable")
-                        stations = stations_response.stations
+                        self.stations = stations_response.stations
                     except CannotConnectError:
                         return self.async_abort(reason="api_unavailable")
 
-                    station_from = next(
-                        (s for s in stations if s.id == user_input[CONF_STATION_FROM]),
+                    self.station_from = next(
+                        (s for s in self.stations if s.id == user_input[CONF_STATION_FROM]),
                         None,
                     )
-                    station_to = next(
-                        (s for s in stations if s.id == user_input[CONF_STATION_TO]),
+                    self.station_to = next(
+                        (s for s in self.stations if s.id == user_input[CONF_STATION_TO]),
                         None,
                     )
 
-                    if station_from is None or station_to is None:
+                    if self.station_from is None or self.station_to is None:
                         errors["base"] = "invalid_station"
                     else:
                         # Check if this connection already exists as a subentry
@@ -269,14 +276,9 @@ if ConfigSubentryFlow is not None:
                                 if subentry.unique_id == unique_id:
                                     return self.async_abort(reason="already_configured")
 
-                        return self.async_create_entry(
-                            title=(
-                                f"Connection: {station_from.standard_name} → "
-                                f"{station_to.standard_name}"
-                            ),
-                            data=user_input,
-                            unique_id=unique_id,
-                        )
+                        # Store connection data and move to liveboard options
+                        self.connection_data = user_input
+                        return await self.async_step_liveboards()
 
             # Fetch station choices
             try:
@@ -315,6 +317,110 @@ if ConfigSubentryFlow is not None:
                 step_id="user",
                 data_schema=schema,
                 errors=errors,
+            )
+
+        async def async_step_liveboards(
+            self, user_input: dict[str, Any] | None = None
+        ) -> SubentryFlowResult:
+            """Ask if user wants to add liveboards for departure/arrival stations."""
+            if user_input is not None:
+                # Create the connection subentry first
+                vias = "_excl_vias" if self.connection_data.get(CONF_EXCLUDE_VIAS) else ""
+                unique_id = (
+                    f"connection_{self.connection_data[CONF_STATION_FROM]}_"
+                    f"{self.connection_data[CONF_STATION_TO]}{vias}"
+                )
+
+                # Find the main entry to add liveboard subentries to
+                main_entry = None
+                for entry in self.hass.config_entries.async_entries(DOMAIN):
+                    # Main entry has no subentry_type
+                    if not hasattr(entry, "subentry_type") or entry.subentry_type is None:
+                        main_entry = entry
+                        break
+
+                # Create liveboard subentries if requested and main entry exists
+                if main_entry is not None:
+                    from types import MappingProxyType
+
+                    # Import ConfigSubentry (we know it's available since we're in this handler)
+                    from homeassistant.config_entries import ConfigSubentry as _ConfigSubentry
+
+                    liveboards_created = []
+
+                    if user_input.get("add_departure_liveboard", False):
+                        station_id = self.connection_data[CONF_STATION_FROM]
+                        liveboard_unique_id = f"liveboard_{station_id}"
+
+                        # Check if liveboard already exists
+                        liveboard_exists = any(
+                            sub.unique_id == liveboard_unique_id
+                            for sub in main_entry.subentries.values()
+                        )
+
+                        if not liveboard_exists:
+                            liveboard_data = {CONF_STATION_LIVE: station_id}
+                            liveboard_subentry = _ConfigSubentry(
+                                data=MappingProxyType(liveboard_data),
+                                unique_id=liveboard_unique_id,
+                                subentry_type=SUBENTRY_TYPE_LIVEBOARD,
+                                title=f"Liveboard - {self.station_from.standard_name}",
+                            )
+                            self.hass.config_entries.async_add_subentry(
+                                main_entry, liveboard_subentry
+                            )
+                            liveboards_created.append(self.station_from.standard_name)
+
+                    if user_input.get("add_arrival_liveboard", False):
+                        station_id = self.connection_data[CONF_STATION_TO]
+                        liveboard_unique_id = f"liveboard_{station_id}"
+
+                        # Check if liveboard already exists
+                        liveboard_exists = any(
+                            sub.unique_id == liveboard_unique_id
+                            for sub in main_entry.subentries.values()
+                        )
+
+                        if not liveboard_exists:
+                            liveboard_data = {CONF_STATION_LIVE: station_id}
+                            liveboard_subentry = _ConfigSubentry(
+                                data=MappingProxyType(liveboard_data),
+                                unique_id=liveboard_unique_id,
+                                subentry_type=SUBENTRY_TYPE_LIVEBOARD,
+                                title=f"Liveboard - {self.station_to.standard_name}",
+                            )
+                            self.hass.config_entries.async_add_subentry(
+                                main_entry, liveboard_subentry
+                            )
+                            liveboards_created.append(self.station_to.standard_name)
+
+                # Create the connection subentry
+                return self.async_create_entry(
+                    title=(
+                        f"Connection: {self.station_from.standard_name} → "
+                        f"{self.station_to.standard_name}"
+                    ),
+                    data=self.connection_data,
+                    unique_id=unique_id,
+                )
+
+            # Show form with checkboxes for departure/arrival liveboards
+            schema = vol.Schema(
+                {
+                    vol.Optional(
+                        "add_departure_liveboard", default=False
+                    ): BooleanSelector(),
+                    vol.Optional("add_arrival_liveboard", default=False): BooleanSelector(),
+                }
+            )
+
+            return self.async_show_form(
+                step_id="liveboards",
+                data_schema=schema,
+                description_placeholders={
+                    "departure_station": self.station_from.standard_name,
+                    "arrival_station": self.station_to.standard_name,
+                },
             )
 
     class LiveboardFlowHandler(ConfigSubentryFlow):
