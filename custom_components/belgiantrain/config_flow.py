@@ -12,9 +12,14 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 # ConfigSubentryFlow is only available in Home Assistant 2025.2+
 try:
-    from homeassistant.config_entries import ConfigSubentryFlow, SubentryFlowResult
+    from homeassistant.config_entries import (
+        ConfigSubentry,
+        ConfigSubentryFlow,
+        SubentryFlowResult,
+    )
 except ImportError:
     # Fallback for older versions - this won't be used but prevents import errors
+    ConfigSubentry = None  # type: ignore[misc,assignment]
     ConfigSubentryFlow = None  # type: ignore[misc,assignment]
     SubentryFlowResult = None  # type: ignore[misc,assignment]
 from homeassistant.helpers.selector import (
@@ -241,11 +246,6 @@ if ConfigSubentryFlow is not None:
             station_name: str,
         ) -> None:
             """Create a liveboard subentry if it doesn't already exist."""
-            # Import ConfigSubentry (available since we're in this handler)
-            from homeassistant.config_entries import (
-                ConfigSubentry as _ConfigSubentry,
-            )
-
             liveboard_unique_id = f"liveboard_{station_id}"
 
             # Check if liveboard already exists
@@ -256,7 +256,7 @@ if ConfigSubentryFlow is not None:
 
             if not liveboard_exists:
                 liveboard_data = {CONF_STATION_LIVE: station_id}
-                liveboard_subentry = _ConfigSubentry(
+                liveboard_subentry = ConfigSubentry(
                     data=MappingProxyType(liveboard_data),
                     unique_id=liveboard_unique_id,
                     subentry_type=SUBENTRY_TYPE_LIVEBOARD,
