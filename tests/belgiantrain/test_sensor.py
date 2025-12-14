@@ -425,3 +425,104 @@ async def test_nmbs_sensor_connection_already_left(hass: HomeAssistant, mock_sta
     assert sensor.native_value is not None
     attrs = sensor.extra_state_attributes
     assert attrs["vehicle_id"] == "IC1234"
+
+
+async def test_coordinator_access_via_runtime_data(
+    hass: HomeAssistant, mock_stations, mock_config_entry
+):
+    """Test that sensor setup accesses coordinator via runtime_data."""
+    # Set up domain data structure
+    hass.data[DOMAIN] = {
+        "stations": mock_stations,
+        "coordinators": {},
+    }
+
+    # Create a mock coordinator
+    mock_coordinator = MagicMock()
+    mock_coordinator.data = {}
+
+    # Create runtime_data with the coordinator
+    from custom_components.belgiantrain.data import BelgianTrainData
+
+    mock_runtime_data = BelgianTrainData(coordinator=mock_coordinator)
+    mock_config_entry.runtime_data = mock_runtime_data
+    mock_config_entry.entry_id = "test_entry_id"
+
+    # Mock subentry_type attribute
+    mock_config_entry.subentry_type = None
+
+    from custom_components.belgiantrain.sensor import async_setup_entry
+
+    entities = []
+
+    def mock_add_entities(entity_list):
+        entities.extend(entity_list)
+
+    await async_setup_entry(hass, mock_config_entry, mock_add_entities)
+
+    # Should create entities using coordinator from runtime_data
+    assert len(entities) == 3
+
+
+async def test_coordinator_access_via_hass_data_fallback(
+    hass: HomeAssistant, mock_stations, mock_config_entry
+):
+    """Test sensor setup falls back to hass.data when runtime_data unavailable."""
+    # Create a mock coordinator
+    mock_coordinator = MagicMock()
+    mock_coordinator.data = {}
+
+    # Set up domain data with coordinator in legacy location
+    hass.data[DOMAIN] = {
+        "stations": mock_stations,
+        "coordinators": {"test_entry_id": mock_coordinator},
+    }
+
+    # Config entry without runtime_data (legacy mode)
+    mock_config_entry.runtime_data = None
+    mock_config_entry.entry_id = "test_entry_id"
+
+    # Mock subentry_type attribute
+    mock_config_entry.subentry_type = None
+
+    from custom_components.belgiantrain.sensor import async_setup_entry
+
+    entities = []
+
+    def mock_add_entities(entity_list):
+        entities.extend(entity_list)
+
+    await async_setup_entry(hass, mock_config_entry, mock_add_entities)
+
+    # Should create entities using coordinator from hass.data
+    assert len(entities) == 3
+
+
+async def test_coordinator_not_found(
+    hass: HomeAssistant, mock_stations, mock_config_entry
+):
+    """Test sensor setup when no coordinator is found in either location."""
+    # Set up domain data without coordinator
+    hass.data[DOMAIN] = {
+        "stations": mock_stations,
+        "coordinators": {},
+    }
+
+    # Config entry without runtime_data and no coordinator in hass.data
+    mock_config_entry.runtime_data = None
+    mock_config_entry.entry_id = "test_entry_id"
+
+    # Mock subentry_type attribute
+    mock_config_entry.subentry_type = None
+
+    from custom_components.belgiantrain.sensor import async_setup_entry
+
+    entities = []
+
+    def mock_add_entities(entity_list):
+        entities.extend(entity_list)
+
+    await async_setup_entry(hass, mock_config_entry, mock_add_entities)
+
+    # Should not create any entities if coordinator is not found
+    assert len(entities) == 0

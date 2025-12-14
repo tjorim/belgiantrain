@@ -13,7 +13,6 @@ from homeassistant.const import (
     CONF_SHOW_ON_MAP,
     UnitOfTime,
 )
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
 from .const import (
@@ -25,6 +24,7 @@ from .const import (
     SUBENTRY_TYPE_LIVEBOARD,
     find_station,
 )
+from .entity import BelgianTrainEntity
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -104,10 +104,14 @@ async def async_setup_entry(
             )
             return
 
-    # Get coordinator from hass.data
-    domain_data = hass.data.get(DOMAIN, {})
-    coordinators = domain_data.get("coordinators", {})
-    coordinator = coordinators.get(config_entry.entry_id)
+    # Get coordinator from runtime_data if available, else from hass.data (legacy)
+    coordinator = (
+        config_entry.runtime_data.coordinator
+        if hasattr(config_entry, "runtime_data") and config_entry.runtime_data
+        else hass.data.get(DOMAIN, {})
+        .get("coordinators", {})
+        .get(config_entry.entry_id)
+    )
 
     if coordinator is None:
         _LOGGER.error(
@@ -181,7 +185,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class NMBSLiveBoard(CoordinatorEntity[dict[str, Any]], SensorEntity):
+class NMBSLiveBoard(BelgianTrainEntity, SensorEntity):
     """Get the next train from a station's liveboard."""
 
     _attr_attribution = "https://api.irail.be/"
@@ -294,7 +298,7 @@ class NMBSLiveBoard(CoordinatorEntity[dict[str, Any]], SensorEntity):
         self.async_write_ha_state()
 
 
-class NMBSSensor(CoordinatorEntity[dict[str, Any]], SensorEntity):
+class NMBSSensor(BelgianTrainEntity, SensorEntity):
     """Get the total travel time for a given connection."""
 
     _attr_attribution = "https://api.irail.be/"
@@ -475,7 +479,7 @@ class NMBSSensor(CoordinatorEntity[dict[str, Any]], SensorEntity):
         self.async_write_ha_state()
 
 
-class StandaloneLiveboardSensor(CoordinatorEntity[dict[str, Any]], SensorEntity):
+class StandaloneLiveboardSensor(BelgianTrainEntity, SensorEntity):
     """Standalone liveboard sensor for a single station."""
 
     _attr_attribution = "https://api.irail.be/"
