@@ -6,18 +6,10 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from homeassistant.config_entries import ConfigEntry
-
     from .coordinator import (
         BelgianTrainDataUpdateCoordinator,
         LiveboardDataUpdateCoordinator,
     )
-
-
-# Type alias for config entries with runtime_data.
-# Available for future use when legacy backward compatibility is no longer needed.
-# Aligns with Home Assistant integration blueprint patterns.
-type BelgianTrainConfigEntry = ConfigEntry[BelgianTrainData]
 
 
 @dataclass
