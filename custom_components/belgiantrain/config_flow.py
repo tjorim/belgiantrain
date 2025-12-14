@@ -374,14 +374,10 @@ if ConfigSubentryFlow is not None:
                 station_to_id = self.connection_data[CONF_STATION_TO]
                 unique_id = f"connection_{station_from_id}_{station_to_id}{vias}"
 
-                # Find main entry to add liveboard subentries to
-                main_entry = None
-                for entry in self.hass.config_entries.async_entries(DOMAIN):
-                    # Main entry has no subentry_type
-                    has_subentry_type = hasattr(entry, "subentry_type")
-                    if not has_subentry_type or entry.subentry_type is None:
-                        main_entry = entry
-                        break
+                # Get parent entry directly from context (more efficient)
+                main_entry = self.hass.config_entries.async_get_entry(
+                    self.context["parent_entry_id"]
+                )
 
                 # Create liveboard subentries if requested
                 if main_entry is not None:
