@@ -17,7 +17,12 @@ class BelgianTrainEntity(
         BelgianTrainDataUpdateCoordinator | LiveboardDataUpdateCoordinator
     ]
 ):
-    """Base entity for Belgian Train integration."""
+    """Base entity for Belgian Train integration.
+
+    Provides standardized device info and entity naming.
+    Available for future use when refactoring existing sensor entities.
+    Aligns with Home Assistant integration blueprint patterns.
+    """
 
     _attr_has_entity_name = True
 

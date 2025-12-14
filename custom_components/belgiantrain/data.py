@@ -14,6 +14,9 @@ if TYPE_CHECKING:
     )
 
 
+# Type alias for config entries with runtime_data.
+# Available for future use when legacy backward compatibility is no longer needed.
+# Aligns with Home Assistant integration blueprint patterns.
 type BelgianTrainConfigEntry = ConfigEntry[BelgianTrainData]
 
 
