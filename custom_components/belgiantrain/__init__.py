@@ -442,57 +442,63 @@ async def async_setup_entry(  # noqa: PLR0911, PLR0912, PLR0915
         )
 
         _LOGGER.debug(
-            "Main entry detected: is_legacy=%s, entry.data=%s, has_subentries=%d",
+            "Main entry detected: is_legacy=%s, entry.data=%s, "
+            "has_subentries=%d, unique_id=%s",
             is_legacy_connection,
             entry.data,
             len(entry.subentries) if hasattr(entry, "subentries") else 0,
+            entry.unique_id,
         )
 
-        if not is_legacy_connection and "first_connection" in entry.data:
-            if not _create_connection_subentry_from_data(
-                hass, entry, entry.data["first_connection"]
-            ):
-                return False
-
-            # Create liveboard subentries if requested
-            if "liveboards_to_add" in entry.data:
-                unique_station_ids = set(entry.data["liveboards_to_add"])
-                for station_id in unique_station_ids:
-                    _create_liveboard_subentry(hass, entry, station_id)
-
-            if "first_liveboard" in entry.data:
-                station_id = entry.data["first_liveboard"][CONF_STATION_LIVE]
-                if not _create_liveboard_subentry(hass, entry, station_id):
-                    _LOGGER.error(
-                        "Could not find station with id '%s' for liveboard setup. "
-                        "Aborting entry setup.",
-                        station_id,
-                    )
+        # Handle main entry (distinguished by unique_id == DOMAIN)
+        if not is_legacy_connection and entry.unique_id == DOMAIN:
+            # Process initial setup data if present
+            if "first_connection" in entry.data:
+                if not _create_connection_subentry_from_data(
+                    hass, entry, entry.data["first_connection"]
+                ):
                     return False
+
+                # Create liveboard subentries if requested
+                if "liveboards_to_add" in entry.data:
+                    unique_station_ids = set(entry.data["liveboards_to_add"])
+                    for station_id in unique_station_ids:
+                        _create_liveboard_subentry(hass, entry, station_id)
+
+                if "first_liveboard" in entry.data:
+                    station_id = entry.data["first_liveboard"][CONF_STATION_LIVE]
+                    if not _create_liveboard_subentry(hass, entry, station_id):
+                        _LOGGER.error(
+                            "Could not find station with id '%s' for liveboard setup. "
+                            "Aborting entry setup.",
+                            station_id,
+                        )
+                        return False
+
+                # Clean up initial setup data once subentries are created
+                # This prevents trying to create them again on restarts
+                keys_to_remove = {
+                    "first_connection",
+                    "first_liveboard",
+                    "liveboards_to_add",
+                }
+                if any(key in entry.data for key in keys_to_remove):
+                    # Capture removed keys before modifying entry data
+                    removed_keys = keys_to_remove & entry.data.keys()
+                    new_data = {
+                        k: v for k, v in entry.data.items() if k not in keys_to_remove
+                    }
+                    hass.config_entries.async_update_entry(entry, data=new_data)
+                    _LOGGER.debug(
+                        "Cleaned up initial setup data from main entry: %s",
+                        removed_keys,
+                    )
 
             # Main entry coordinates all subentries
             _LOGGER.debug(
                 "Processing subentries from main entry. Subentries available: %d",
                 len(entry.subentries),
             )
-            # Clean up initial setup data once subentries are created
-            # This prevents trying to create them again on restarts
-            keys_to_remove = {
-                "first_connection",
-                "first_liveboard",
-                "liveboards_to_add",
-            }
-            if any(key in entry.data for key in keys_to_remove):
-                # Capture removed keys before modifying entry data
-                removed_keys = keys_to_remove & entry.data.keys()
-                new_data = {
-                    k: v for k, v in entry.data.items() if k not in keys_to_remove
-                }
-                hass.config_entries.async_update_entry(entry, data=new_data)
-                _LOGGER.debug(
-                    "Cleaned up initial setup data from main entry: %s",
-                    removed_keys,
-                )
 
             # Create coordinators for all existing subentries
             api_client = iRail(session=async_get_clientsession(hass))
