@@ -21,6 +21,7 @@ from .const import (
     CONF_STATION_LIVE,
     CONF_STATION_TO,
     DOMAIN,
+    SUBENTRY_TYPE_CONNECTION,
     SUBENTRY_TYPE_LIVEBOARD,
     find_station,
 )
