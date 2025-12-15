@@ -476,6 +476,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                             station_from.standard_name,
                             station_to.standard_name,
                         )
+                    else:
+                        _LOGGER.warning(
+                            "Skipping connection subentry %s: station lookup failed "
+                            "(from=%s, to=%s)",
+                            subentry.subentry_id,
+                            subentry.data.get(CONF_STATION_FROM),
+                            subentry.data.get(CONF_STATION_TO),
+                        )
 
                 elif subentry.subentry_type == SUBENTRY_TYPE_LIVEBOARD:
                     station = find_station(hass, subentry.data[CONF_STATION_LIVE])
@@ -489,6 +497,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                         _LOGGER.debug(
                             "Created coordinator for liveboard subentry: %s",
                             station.standard_name,
+                        )
+                    else:
+                        _LOGGER.warning(
+                            "Skipping liveboard subentry %s: station lookup failed "
+                            "(station=%s)",
+                            subentry.subentry_id,
+                            subentry.data.get(CONF_STATION_LIVE),
                         )
 
             # Store subentry coordinators in hass.data for sensor platform to access

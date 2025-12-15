@@ -145,7 +145,7 @@ async def async_setup_entry(
                     )
 
         if entities:
-            _LOGGER.info(
+            _LOGGER.debug(
                 "Adding %d entities for main entry subentries: %s",
                 len(entities),
                 [type(e).__name__ for e in entities],
@@ -231,7 +231,7 @@ async def async_setup_entry(
 
         # Create standalone liveboard sensor (enabled by default)
         entity = StandaloneLiveboardSensor(coordinator, station)
-        _LOGGER.warning(
+        _LOGGER.debug(
             "Creating standalone liveboard sensor for station %s (entry %s, entity_id will be: %s)",
             station.standard_name,
             config_entry.entry_id,
@@ -281,7 +281,7 @@ async def async_setup_entry(
             ]
         )
 
-    _LOGGER.warning(
+    _LOGGER.debug(
         "Adding %d entities to Home Assistant for entry %s: %s",
         len(entities),
         config_entry.entry_id,
