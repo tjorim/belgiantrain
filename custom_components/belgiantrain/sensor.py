@@ -381,7 +381,7 @@ class NMBSLiveBoard(BelgianTrainEntity, SensorEntity):
         """Return the unique ID."""
         unique_id = f"{self._station.id}_{self._station_from.id}_{self._station_to.id}"
         vias = "_excl_vias" if self._excl_vias else ""
-        return f"nmbs_live_{unique_id}{vias}"
+        return f"belgiantrain_live_{unique_id}{vias}"
 
     @property
     def icon(self) -> str:
@@ -490,7 +490,7 @@ class NMBSSensor(BelgianTrainEntity, SensorEntity):
         unique_id = f"{self._station_from.id}_{self._station_to.id}"
 
         vias = "_excl_vias" if self._excl_vias else ""
-        return f"nmbs_connection_{unique_id}{vias}"
+        return f"belgiantrain_connection_{unique_id}{vias}"
 
     @property
     def name(self) -> str:
@@ -663,7 +663,7 @@ class StandaloneLiveboardSensor(BelgianTrainEntity, SensorEntity):
     @property
     def unique_id(self) -> str:
         """Return the unique ID."""
-        return f"nmbs_liveboard_{self._station.id}"
+        return f"belgiantrain_liveboard_{self._station.id}"
 
     @property
     def icon(self) -> str:
