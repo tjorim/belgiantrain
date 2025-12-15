@@ -350,73 +350,73 @@ class ConnectionFlowHandler(ConfigSubentryFlow):
             errors=errors,
         )
 
-        async def async_step_liveboards(
-            self, user_input: dict[str, Any] | None = None
-        ) -> SubentryFlowResult:
-            """Ask if user wants to add liveboards for stations."""
-            # Add null checks for safety
-            if self.station_from is None or self.station_to is None:
-                return self.async_abort(reason="invalid_state")
+    async def async_step_liveboards(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Ask if user wants to add liveboards for stations."""
+        # Add null checks for safety
+        if self.station_from is None or self.station_to is None:
+            return self.async_abort(reason="invalid_state")
 
-            if user_input is not None:
-                # Create the connection subentry
-                excl_vias = self.connection_data.get(CONF_EXCLUDE_VIAS)
-                vias = "_excl_vias" if excl_vias else ""
-                station_from_id = self.connection_data[CONF_STATION_FROM]
-                station_to_id = self.connection_data[CONF_STATION_TO]
-                unique_id = f"connection_{station_from_id}_{station_to_id}{vias}"
+        if user_input is not None:
+            # Create the connection subentry
+            excl_vias = self.connection_data.get(CONF_EXCLUDE_VIAS)
+            vias = "_excl_vias" if excl_vias else ""
+            station_from_id = self.connection_data[CONF_STATION_FROM]
+            station_to_id = self.connection_data[CONF_STATION_TO]
+            unique_id = f"connection_{station_from_id}_{station_to_id}{vias}"
 
-                # Get parent entry directly from context (more efficient)
-                main_entry = self.hass.config_entries.async_get_entry(
-                    self.context["parent_entry_id"]
-                )
-
-                # Create liveboard subentries if requested
-                if main_entry is not None:
-                    if user_input.get("add_departure_liveboard", False):
-                        self._create_liveboard_if_needed(
-                            main_entry,
-                            station_from_id,
-                            self.station_from.standard_name,
-                        )
-
-                    if user_input.get("add_arrival_liveboard", False):
-                        self._create_liveboard_if_needed(
-                            main_entry,
-                            station_to_id,
-                            self.station_to.standard_name,
-                        )
-
-                # Create the connection subentry
-                return self.async_create_entry(
-                    title=(
-                        f"Connection: {self.station_from.standard_name} → "
-                        f"{self.station_to.standard_name}"
-                    ),
-                    data=self.connection_data,
-                    unique_id=unique_id,
-                )
-
-            # Show form with checkboxes for liveboards
-            schema = vol.Schema(
-                {
-                    vol.Optional(
-                        "add_departure_liveboard", default=False
-                    ): BooleanSelector(),
-                    vol.Optional(
-                        "add_arrival_liveboard", default=False
-                    ): BooleanSelector(),
-                }
+            # Get parent entry directly from context (more efficient)
+            main_entry = self.hass.config_entries.async_get_entry(
+                self.context["parent_entry_id"]
             )
 
-            return self.async_show_form(
-                step_id="liveboards",
-                data_schema=schema,
-                description_placeholders={
-                    "departure_station": self.station_from.standard_name,
-                    "arrival_station": self.station_to.standard_name,
-                },
+            # Create liveboard subentries if requested
+            if main_entry is not None:
+                if user_input.get("add_departure_liveboard", False):
+                    self._create_liveboard_if_needed(
+                        main_entry,
+                        station_from_id,
+                        self.station_from.standard_name,
+                    )
+
+                if user_input.get("add_arrival_liveboard", False):
+                    self._create_liveboard_if_needed(
+                        main_entry,
+                        station_to_id,
+                        self.station_to.standard_name,
+                    )
+
+            # Create the connection subentry
+            return self.async_create_entry(
+                title=(
+                    f"Connection: {self.station_from.standard_name} → "
+                    f"{self.station_to.standard_name}"
+                ),
+                data=self.connection_data,
+                unique_id=unique_id,
             )
+
+        # Show form with checkboxes for liveboards
+        schema = vol.Schema(
+            {
+                vol.Optional(
+                    "add_departure_liveboard", default=False
+                ): BooleanSelector(),
+                vol.Optional(
+                    "add_arrival_liveboard", default=False
+                ): BooleanSelector(),
+            }
+        )
+
+        return self.async_show_form(
+            step_id="liveboards",
+            data_schema=schema,
+            description_placeholders={
+                "departure_station": self.station_from.standard_name,
+                "arrival_station": self.station_to.standard_name,
+            },
+        )
 
 class LiveboardFlowHandler(ConfigSubentryFlow):
     """Handle subentry flow for liveboard sensors."""
