@@ -249,7 +249,7 @@ class ConnectionFlowHandler(ConfigSubentryFlow):
         station_name: str,
     ) -> None:
         """Create a liveboard subentry if it doesn't already exist."""
-        liveboard_unique_id = f"liveboard_{station_id}"
+        liveboard_unique_id = f"nmbs_liveboard_{station_id}"
 
         # Check if liveboard already exists
         liveboard_exists = any(
@@ -309,7 +309,7 @@ class ConnectionFlowHandler(ConfigSubentryFlow):
                     excl_vias = user_input.get(CONF_EXCLUDE_VIAS)
                     vias = "_excl_vias" if excl_vias else ""
                     unique_id = (
-                        f"connection_{station_from_id}_{station_to_id}{vias}"
+                        f"nmbs_connection_{station_from_id}_{station_to_id}{vias}"
                     )
                     for entry in self.hass.config_entries.async_entries(DOMAIN):
                         for subentry in entry.subentries.values():
@@ -437,7 +437,7 @@ class ConnectionFlowHandler(ConfigSubentryFlow):
 class LiveboardFlowHandler(ConfigSubentryFlow):
     """Handle subentry flow for liveboard sensors."""
 
-    async def async_step_user(
+    async def async_step_user(  # noqa: PLR0911
         self, user_input: dict[str, Any] | None = None
     ) -> SubentryFlowResult:
         """Handle the step to setup a liveboard sensor for a station."""
@@ -450,11 +450,23 @@ class LiveboardFlowHandler(ConfigSubentryFlow):
             # Check if this station is already configured as a subentry
             for entry in self.hass.config_entries.async_entries(DOMAIN):
                 for subentry in entry.subentries.values():
-                    if subentry.unique_id == f"liveboard_{station_id}":
+                    if subentry.unique_id == f"nmbs_liveboard_{station_id}":
                         return self.async_abort(reason="already_configured")
 
             # Get station details for the title
             stations = self.hass.data.get(DOMAIN, {}).get("stations", [])
+
+            # Fetch stations if not available
+            if not stations:
+                try:
+                    api_client = iRail(session=async_get_clientsession(self.hass))
+                    stations_response = await api_client.get_stations()
+                    if stations_response is None:
+                        return self.async_abort(reason="api_unavailable")
+                    stations = stations_response.stations
+                except CannotConnectError:
+                    return self.async_abort(reason="api_unavailable")
+
             station = next((s for s in stations if s.id == station_id), None)
 
             if station is None:
@@ -463,7 +475,7 @@ class LiveboardFlowHandler(ConfigSubentryFlow):
                 return self.async_create_entry(
                     title=f"Liveboard - {station.standard_name}",
                     data={CONF_STATION_LIVE: station_id},
-                    unique_id=f"liveboard_{station_id}",
+                    unique_id=f"nmbs_liveboard_{station_id}",
                 )
 
         # Fetch station choices

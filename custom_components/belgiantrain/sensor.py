@@ -132,6 +132,13 @@ async def async_setup_entry(  # noqa: PLR0911, PLR0912, PLR0915
                     _LOGGER.debug(
                         "Created liveboard entity for %s", station.standard_name
                     )
+                else:
+                    _LOGGER.warning(
+                        "Skipping liveboard entity for subentry %s: "
+                        "station lookup failed (station=%s)",
+                        subentry_id,
+                        subentry.data[CONF_STATION_LIVE],
+                    )
 
             elif subentry.subentry_type == SUBENTRY_TYPE_CONNECTION:
                 station_from = find_station(hass, subentry.data[CONF_STATION_FROM])
