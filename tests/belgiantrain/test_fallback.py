@@ -38,11 +38,12 @@ async def test_connection_fallback_for_old_ha_versions(hass: HomeAssistant) -> N
     }
 
     # Mock the ConfigSubentry as None to simulate HA < 2025.2
-    with patch(
-        "custom_components.belgiantrain._ConfigSubentry", None
-    ), patch.object(
-        hass.config_entries, "async_forward_entry_setups"
-    ) as mock_forward_setups:
+    with (
+        patch("custom_components.belgiantrain._ConfigSubentry", None),
+        patch.object(
+            hass.config_entries, "async_forward_entry_setups"
+        ) as mock_forward_setups,
+    ):
         # Create a config entry with initial connection data
         entry = MockConfigEntry(
             domain=DOMAIN,
@@ -102,11 +103,12 @@ async def test_liveboard_fallback_for_old_ha_versions(hass: HomeAssistant) -> No
     }
 
     # Mock the ConfigSubentry as None to simulate HA < 2025.2
-    with patch(
-        "custom_components.belgiantrain._ConfigSubentry", None
-    ), patch.object(
-        hass.config_entries, "async_forward_entry_setups"
-    ) as mock_forward_setups:
+    with (
+        patch("custom_components.belgiantrain._ConfigSubentry", None),
+        patch.object(
+            hass.config_entries, "async_forward_entry_setups"
+        ) as mock_forward_setups,
+    ):
         # Create a config entry with initial liveboard data
         entry = MockConfigEntry(
             domain=DOMAIN,

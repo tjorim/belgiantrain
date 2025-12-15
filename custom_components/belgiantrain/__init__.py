@@ -612,8 +612,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if "coordinators" in hass.data[DOMAIN]:
             hass.data[DOMAIN]["coordinators"].pop(entry.entry_id, None)
 
-        # Remove subentry coordinators if it exists
+        # Remove all subentry coordinators
+        # Safe to remove entire dict: integration enforces single main entry
         if "subentry_coordinators" in hass.data[DOMAIN]:
-            hass.data[DOMAIN]["subentry_coordinators"].pop(entry.entry_id, None)
+            hass.data[DOMAIN].pop("subentry_coordinators", None)
 
     return unload_ok
