@@ -112,13 +112,13 @@ class NMBSConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_STATION_FROM): SelectSelector(
                     SelectSelectorConfig(
                         options=choices,
-                        mode=SelectSelectorMode.DROPDOWN,
+                        mode=SelectSelectorMode.LIST,
                     )
                 ),
                 vol.Required(CONF_STATION_TO): SelectSelector(
                     SelectSelectorConfig(
                         options=choices,
-                        mode=SelectSelectorMode.DROPDOWN,
+                        mode=SelectSelectorMode.LIST,
                     )
                 ),
                 vol.Optional(CONF_EXCLUDE_VIAS): BooleanSelector(),
@@ -208,7 +208,7 @@ class NMBSConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_STATION_LIVE): SelectSelector(
                     SelectSelectorConfig(
                         options=choices,
-                        mode=SelectSelectorMode.DROPDOWN,
+                        mode=SelectSelectorMode.LIST,
                     )
                 ),
             }
@@ -330,13 +330,13 @@ class ConnectionFlowHandler(ConfigSubentryFlow):
                 vol.Required(CONF_STATION_FROM): SelectSelector(
                     SelectSelectorConfig(
                         options=choices,
-                        mode=SelectSelectorMode.DROPDOWN,
+                        mode=SelectSelectorMode.LIST,
                     )
                 ),
                 vol.Required(CONF_STATION_TO): SelectSelector(
                     SelectSelectorConfig(
                         options=choices,
-                        mode=SelectSelectorMode.DROPDOWN,
+                        mode=SelectSelectorMode.LIST,
                     )
                 ),
                 vol.Optional(CONF_EXCLUDE_VIAS): BooleanSelector(),
@@ -469,7 +469,7 @@ class LiveboardFlowHandler(ConfigSubentryFlow):
                 vol.Required(CONF_STATION_LIVE): SelectSelector(
                     SelectSelectorConfig(
                         options=choices,
-                        mode=SelectSelectorMode.DROPDOWN,
+                        mode=SelectSelectorMode.LIST,
                     )
                 ),
             }
