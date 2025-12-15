@@ -311,44 +311,44 @@ class ConnectionFlowHandler(ConfigSubentryFlow):
                     self.connection_data = user_input
                     return await self.async_step_liveboards()
 
-            # Fetch station choices
-            try:
-                api_client = iRail(session=async_get_clientsession(self.hass))
-                stations_response = await api_client.get_stations()
-                if stations_response is None:
-                    return self.async_abort(reason="api_unavailable")
-
-                choices = [
-                    SelectOptionDict(value=station.id, label=station.standard_name)
-                    for station in stations_response.stations
-                ]
-            except CannotConnectError:
+        # Fetch station choices
+        try:
+            api_client = iRail(session=async_get_clientsession(self.hass))
+            stations_response = await api_client.get_stations()
+            if stations_response is None:
                 return self.async_abort(reason="api_unavailable")
 
-            schema = vol.Schema(
-                {
-                    vol.Required(CONF_STATION_FROM): SelectSelector(
-                        SelectSelectorConfig(
-                            options=choices,
-                            mode=SelectSelectorMode.DROPDOWN,
-                        )
-                    ),
-                    vol.Required(CONF_STATION_TO): SelectSelector(
-                        SelectSelectorConfig(
-                            options=choices,
-                            mode=SelectSelectorMode.DROPDOWN,
-                        )
-                    ),
-                    vol.Optional(CONF_EXCLUDE_VIAS): BooleanSelector(),
-                    vol.Optional(CONF_SHOW_ON_MAP): BooleanSelector(),
-                }
-            )
+            choices = [
+                SelectOptionDict(value=station.id, label=station.standard_name)
+                for station in stations_response.stations
+            ]
+        except CannotConnectError:
+            return self.async_abort(reason="api_unavailable")
 
-            return self.async_show_form(
-                step_id="user",
-                data_schema=schema,
-                errors=errors,
-            )
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_STATION_FROM): SelectSelector(
+                    SelectSelectorConfig(
+                        options=choices,
+                        mode=SelectSelectorMode.DROPDOWN,
+                    )
+                ),
+                vol.Required(CONF_STATION_TO): SelectSelector(
+                    SelectSelectorConfig(
+                        options=choices,
+                        mode=SelectSelectorMode.DROPDOWN,
+                    )
+                ),
+                vol.Optional(CONF_EXCLUDE_VIAS): BooleanSelector(),
+                vol.Optional(CONF_SHOW_ON_MAP): BooleanSelector(),
+            }
+        )
+
+        return self.async_show_form(
+            step_id="user",
+            data_schema=schema,
+            errors=errors,
+        )
 
         async def async_step_liveboards(
             self, user_input: dict[str, Any] | None = None
