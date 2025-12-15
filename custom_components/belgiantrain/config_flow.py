@@ -267,48 +267,49 @@ class ConnectionFlowHandler(ConfigSubentryFlow):
         if user_input is not None and not self.connection_data:
             if user_input[CONF_STATION_FROM] == user_input[CONF_STATION_TO]:
                 errors["base"] = "same_station"
-                    # Fetch stations for validation
-                    try:
-                        api_client = iRail(
-                            session=async_get_clientsession(self.hass)
-                        )
-                        stations_response = await api_client.get_stations()
-                        if stations_response is None:
-                            return self.async_abort(reason="api_unavailable")
-                        self.stations = stations_response.stations
-                    except CannotConnectError:
+            else:
+                # Fetch stations for validation
+                try:
+                    api_client = iRail(
+                        session=async_get_clientsession(self.hass)
+                    )
+                    stations_response = await api_client.get_stations()
+                    if stations_response is None:
                         return self.async_abort(reason="api_unavailable")
+                    self.stations = stations_response.stations
+                except CannotConnectError:
+                    return self.async_abort(reason="api_unavailable")
 
-                    station_from_id = user_input[CONF_STATION_FROM]
-                    station_to_id = user_input[CONF_STATION_TO]
-                    self.station_from = next(
-                        (s for s in self.stations if s.id == station_from_id),
-                        None,
+                station_from_id = user_input[CONF_STATION_FROM]
+                station_to_id = user_input[CONF_STATION_TO]
+                self.station_from = next(
+                    (s for s in self.stations if s.id == station_from_id),
+                    None,
+                )
+                self.station_to = next(
+                    (s for s in self.stations if s.id == station_to_id),
+                    None,
+                )
+
+                if self.station_from is None or self.station_to is None:
+                    errors["base"] = "invalid_station"
+                else:
+                    # Check if this connection already exists
+                    excl_vias = user_input.get(CONF_EXCLUDE_VIAS)
+                    vias = "_excl_vias" if excl_vias else ""
+                    unique_id = (
+                        f"connection_{station_from_id}_{station_to_id}{vias}"
                     )
-                    self.station_to = next(
-                        (s for s in self.stations if s.id == station_to_id),
-                        None,
-                    )
+                    for entry in self.hass.config_entries.async_entries(DOMAIN):
+                        for subentry in entry.subentries.values():
+                            if subentry.unique_id == unique_id:
+                                return self.async_abort(
+                                    reason="already_configured"
+                                )
 
-                    if self.station_from is None or self.station_to is None:
-                        errors["base"] = "invalid_station"
-                    else:
-                        # Check if this connection already exists
-                        excl_vias = user_input.get(CONF_EXCLUDE_VIAS)
-                        vias = "_excl_vias" if excl_vias else ""
-                        unique_id = (
-                            f"connection_{station_from_id}_{station_to_id}{vias}"
-                        )
-                        for entry in self.hass.config_entries.async_entries(DOMAIN):
-                            for subentry in entry.subentries.values():
-                                if subentry.unique_id == unique_id:
-                                    return self.async_abort(
-                                        reason="already_configured"
-                                    )
-
-                        # Store connection data and move to liveboard options
-                        self.connection_data = user_input
-                        return await self.async_step_liveboards()
+                    # Store connection data and move to liveboard options
+                    self.connection_data = user_input
+                    return await self.async_step_liveboards()
 
             # Fetch station choices
             try:
