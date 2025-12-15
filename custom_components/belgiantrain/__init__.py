@@ -266,7 +266,155 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:  # noqa
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  # noqa: C901, PLR0911, PLR0912, PLR0915
+def _create_connection_subentry_from_data(
+    hass: HomeAssistant, entry: ConfigEntry, connection_data: dict
+) -> bool:
+    """Create a connection subentry from initial setup data.
+
+    Returns True if successful.
+    """
+    if connection_data.get(CONF_STATION_FROM) == connection_data.get(CONF_STATION_TO):
+        _LOGGER.error("Cannot create connection with same station")
+        return False
+
+    station_from_id = connection_data[CONF_STATION_FROM]
+    station_to_id = connection_data[CONF_STATION_TO]
+    excl_vias = connection_data.get(CONF_EXCLUDE_VIAS, False)
+    vias = "_excl_vias" if excl_vias else ""
+
+    station_from = find_station(hass, station_from_id)
+    station_to = find_station(hass, station_to_id)
+
+    if not (station_from and station_to):
+        return False
+
+    conn_id = f"{station_from_id}_{station_to_id}"
+    unique_id = f"nmbs_connection_{conn_id}{vias}"
+
+    # Check if subentry already exists
+    subentry_exists = any(
+        sub.unique_id == unique_id for sub in entry.subentries.values()
+    )
+    if subentry_exists:
+        _LOGGER.debug(
+            "Connection subentry already exists: %s → %s",
+            station_from.standard_name,
+            station_to.standard_name,
+        )
+        return True
+
+    subentry = ConfigSubentry(
+        data=MappingProxyType(connection_data),
+        unique_id=unique_id,
+        subentry_type=SUBENTRY_TYPE_CONNECTION,
+        title=f"Connection: {station_from.standard_name} → {station_to.standard_name}",
+    )
+    _LOGGER.debug(
+        "Creating connection subentry: %s → %s",
+        station_from.standard_name,
+        station_to.standard_name,
+    )
+    hass.config_entries.async_add_subentry(entry, subentry)
+    return True
+
+
+def _create_liveboard_subentry(
+    hass: HomeAssistant, entry: ConfigEntry, station_id: str
+) -> bool:
+    """Create a liveboard subentry for a station. Returns True if successful."""
+    station = find_station(hass, station_id)
+    if not station:
+        return False
+
+    unique_id = f"nmbs_liveboard_{station_id}"
+
+    # Check if subentry already exists
+    subentry_exists = any(
+        sub.unique_id == unique_id for sub in entry.subentries.values()
+    )
+    if subentry_exists:
+        _LOGGER.debug(
+            "Liveboard subentry already exists for station: %s", station.standard_name
+        )
+        return True
+
+    liveboard_data = {CONF_STATION_LIVE: station_id}
+    subentry = ConfigSubentry(
+        data=MappingProxyType(liveboard_data),
+        unique_id=unique_id,
+        subentry_type=SUBENTRY_TYPE_LIVEBOARD,
+        title=f"Liveboard - {station.standard_name}",
+    )
+    _LOGGER.debug("Creating liveboard subentry for station: %s", station.standard_name)
+    hass.config_entries.async_add_subentry(entry, subentry)
+    return True
+
+
+async def _create_subentry_coordinators(
+    hass: HomeAssistant, entry: ConfigEntry, api_client: iRail
+) -> dict:
+    """Create coordinators for all subentries. Returns dict of coordinators."""
+    subentry_coordinators = {}
+
+    for subentry in entry.subentries.values():
+        _LOGGER.debug(
+            "Processing subentry: %s (type=%s, data=%s)",
+            subentry.subentry_id,
+            subentry.subentry_type,
+            subentry.data,
+        )
+
+        if subentry.subentry_type == SUBENTRY_TYPE_CONNECTION:
+            station_from = find_station(hass, subentry.data[CONF_STATION_FROM])
+            station_to = find_station(hass, subentry.data[CONF_STATION_TO])
+
+            if station_from and station_to:
+                coordinator = BelgianTrainDataUpdateCoordinator(
+                    hass, api_client, station_from, station_to, subentry
+                )
+                await coordinator.async_config_entry_first_refresh()
+                subentry_coordinators[subentry.subentry_id] = coordinator
+                _LOGGER.debug(
+                    "Created coordinator for connection subentry: %s → %s",
+                    station_from.standard_name,
+                    station_to.standard_name,
+                )
+            else:
+                _LOGGER.warning(
+                    "Skipping connection subentry %s: station lookup failed "
+                    "(from=%s, to=%s)",
+                    subentry.subentry_id,
+                    subentry.data.get(CONF_STATION_FROM),
+                    subentry.data.get(CONF_STATION_TO),
+                )
+
+        elif subentry.subentry_type == SUBENTRY_TYPE_LIVEBOARD:
+            station = find_station(hass, subentry.data[CONF_STATION_LIVE])
+
+            if station:
+                coordinator = LiveboardDataUpdateCoordinator(
+                    hass, api_client, station, subentry
+                )
+                await coordinator.async_config_entry_first_refresh()
+                subentry_coordinators[subentry.subentry_id] = coordinator
+                _LOGGER.debug(
+                    "Created coordinator for liveboard subentry: %s",
+                    station.standard_name,
+                )
+            else:
+                _LOGGER.warning(
+                    "Skipping liveboard subentry %s: station lookup failed "
+                    "(station=%s)",
+                    subentry.subentry_id,
+                    subentry.data.get(CONF_STATION_LIVE),
+                )
+
+    return subentry_coordinators
+
+
+async def async_setup_entry(  # noqa: PLR0911, PLR0912, PLR0915
+    hass: HomeAssistant, entry: ConfigEntry
+) -> bool:
     """Set up SNCB/NMBS from a config entry."""
     # Ensure station data exists before setting up platforms
     domain_data = hass.data.get(DOMAIN)
@@ -299,121 +447,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
             len(entry.subentries) if hasattr(entry, "subentries") else 0,
         )
 
-        if not is_legacy_connection:
-            # Main integration entry - check for initial data to create first subentry
-            if "first_connection" in entry.data:
-                # Create a connection subentry from the initial setup
-                connection_data = entry.data["first_connection"]
-                if connection_data.get(CONF_STATION_FROM) == connection_data.get(
-                    CONF_STATION_TO
-                ):
-                    _LOGGER.error("Cannot create connection with same station")
-                    return False
+        if not is_legacy_connection and "first_connection" in entry.data:
+            if not _create_connection_subentry_from_data(
+                hass, entry, entry.data["first_connection"]
+            ):
+                return False
 
-                # Create connection subentry
-                station_from_id = connection_data[CONF_STATION_FROM]
-                station_to_id = connection_data[CONF_STATION_TO]
-                excl_vias = connection_data.get(CONF_EXCLUDE_VIAS, False)
-                vias = "_excl_vias" if excl_vias else ""
-
-                station_from = find_station(hass, station_from_id)
-                station_to = find_station(hass, station_to_id)
-
-                if station_from and station_to:
-                    conn_id = f"{station_from_id}_{station_to_id}"
-                    unique_id = f"connection_{conn_id}{vias}"
-                    # Check if subentry already exists
-                    subentry_exists = any(
-                        sub.unique_id == unique_id
-                        for sub in entry.subentries.values()
-                    )
-                    if not subentry_exists:
-                        subentry = ConfigSubentry(
-                            data=MappingProxyType(connection_data),
-                            unique_id=unique_id,
-                            subentry_type=SUBENTRY_TYPE_CONNECTION,
-                            title=(
-                                f"Connection: {station_from.standard_name} → "
-                                f"{station_to.standard_name}"
-                            ),
-                        )
-                        _LOGGER.debug(
-                            "Creating connection subentry: %s → %s",
-                            station_from.standard_name,
-                            station_to.standard_name,
-                        )
-                        hass.config_entries.async_add_subentry(entry, subentry)
-                    else:
-                        _LOGGER.debug(
-                            "Connection subentry already exists: %s → %s",
-                            station_from.standard_name,
-                            station_to.standard_name,
-                        )
-
-            # Create liveboard subentries if requested (for any entry type)
-            # This handles liveboards_to_add whether from connection or standalone
+            # Create liveboard subentries if requested
             if "liveboards_to_add" in entry.data:
-                # Use set to ensure unique station IDs
                 unique_station_ids = set(entry.data["liveboards_to_add"])
                 for station_id in unique_station_ids:
-                    station = find_station(hass, station_id)
-                    if station:
-                        unique_id = f"liveboard_{station_id}"
-                        # Check if subentry already exists
-                        subentry_exists = any(
-                            sub.unique_id == unique_id
-                            for sub in entry.subentries.values()
-                        )
-                        if not subentry_exists:
-                            liveboard_data = {CONF_STATION_LIVE: station_id}
-                            subentry = ConfigSubentry(
-                                data=MappingProxyType(liveboard_data),
-                                unique_id=unique_id,
-                                subentry_type=SUBENTRY_TYPE_LIVEBOARD,
-                                title=f"Liveboard - {station.standard_name}",
-                            )
-                            _LOGGER.debug(
-                                "Creating liveboard subentry for station: %s",
-                                station.standard_name,
-                            )
-                            hass.config_entries.async_add_subentry(entry, subentry)
-                        else:
-                            _LOGGER.debug(
-                                "Liveboard subentry already exists for station: %s",
-                                station.standard_name,
-                            )
+                    _create_liveboard_subentry(hass, entry, station_id)
 
             if "first_liveboard" in entry.data:
-                # Create a liveboard subentry from the initial setup
-                liveboard_data = entry.data["first_liveboard"]
-                station_id = liveboard_data[CONF_STATION_LIVE]
-                station = find_station(hass, station_id)
-
-                if station:
-                    unique_id = f"liveboard_{station_id}"
-                    # Check if subentry already exists
-                    subentry_exists = any(
-                        sub.unique_id == unique_id
-                        for sub in entry.subentries.values()
-                    )
-                    if not subentry_exists:
-                        subentry = ConfigSubentry(
-                            data=MappingProxyType(liveboard_data),
-                            unique_id=unique_id,
-                            subentry_type=SUBENTRY_TYPE_LIVEBOARD,
-                            title=f"Liveboard - {station.standard_name}",
-                        )
-                        _LOGGER.debug(
-                            "Creating liveboard subentry for station: %s",
-                            station.standard_name,
-                        )
-                        hass.config_entries.async_add_subentry(entry, subentry)
-                    else:
-                        _LOGGER.debug(
-                            "Liveboard subentry already exists for station: %s",
-                            station.standard_name,
-                        )
-                else:
+                station_id = entry.data["first_liveboard"][CONF_STATION_LIVE]
+                if not _create_liveboard_subentry(hass, entry, station_id):
                     _LOGGER.error(
                         "Could not find station with id '%s' for liveboard setup. "
                         "Aborting entry setup.",
@@ -447,67 +495,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                     removed_keys,
                 )
 
-            # Create coordinators for all existing subentries (regardless of cleanup)
-            # This runs on both initial setup AND restarts
+            # Create coordinators for all existing subentries
             api_client = iRail(session=async_get_clientsession(hass))
-            subentry_coordinators = {}
-
-            for subentry in entry.subentries.values():
-                _LOGGER.debug(
-                    "Processing subentry: %s (type=%s, data=%s)",
-                    subentry.subentry_id,
-                    subentry.subentry_type,
-                    subentry.data,
-                )
-
-                if subentry.subentry_type == SUBENTRY_TYPE_CONNECTION:
-                    station_from = find_station(
-                        hass, subentry.data[CONF_STATION_FROM]
-                    )
-                    station_to = find_station(
-                        hass, subentry.data[CONF_STATION_TO]
-                    )
-
-                    if station_from and station_to:
-                        coordinator = BelgianTrainDataUpdateCoordinator(
-                            hass, api_client, station_from, station_to, subentry
-                        )
-                        await coordinator.async_config_entry_first_refresh()
-                        subentry_coordinators[subentry.subentry_id] = coordinator
-                        _LOGGER.debug(
-                            "Created coordinator for connection subentry: %s → %s",
-                            station_from.standard_name,
-                            station_to.standard_name,
-                        )
-                    else:
-                        _LOGGER.warning(
-                            "Skipping connection subentry %s: station lookup failed "
-                            "(from=%s, to=%s)",
-                            subentry.subentry_id,
-                            subentry.data.get(CONF_STATION_FROM),
-                            subentry.data.get(CONF_STATION_TO),
-                        )
-
-                elif subentry.subentry_type == SUBENTRY_TYPE_LIVEBOARD:
-                    station = find_station(hass, subentry.data[CONF_STATION_LIVE])
-
-                    if station:
-                        coordinator = LiveboardDataUpdateCoordinator(
-                            hass, api_client, station, subentry
-                        )
-                        await coordinator.async_config_entry_first_refresh()
-                        subentry_coordinators[subentry.subentry_id] = coordinator
-                        _LOGGER.debug(
-                            "Created coordinator for liveboard subentry: %s",
-                            station.standard_name,
-                        )
-                    else:
-                        _LOGGER.warning(
-                            "Skipping liveboard subentry %s: station lookup failed "
-                            "(station=%s)",
-                            subentry.subentry_id,
-                            subentry.data.get(CONF_STATION_LIVE),
-                        )
+            subentry_coordinators = await _create_subentry_coordinators(
+                hass, entry, api_client
+            )
 
             # Store subentry coordinators in hass.data for sensor platform to access
             if subentry_coordinators:

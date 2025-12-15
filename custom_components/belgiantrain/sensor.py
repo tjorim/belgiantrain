@@ -69,7 +69,132 @@ def get_ride_duration(
     return duration_time + get_delay_in_minutes(delay)
 
 
-async def async_setup_entry(  # noqa: PLR0911, PLR0912, PLR0915
+def _create_liveboard_entity(
+    hass: HomeAssistant,
+    coordinator: LiveboardDataUpdateCoordinator,
+    subentry_id: str,
+    station_id: str,
+) -> StandaloneLiveboardSensor | None:
+    """Create a liveboard entity. Returns None if station lookup fails."""
+    station = find_station(hass, station_id)
+    if station:
+        _LOGGER.debug("Created liveboard entity for %s", station.standard_name)
+        return StandaloneLiveboardSensor(coordinator, station)
+
+    _LOGGER.warning(
+        "Skipping liveboard entity for subentry %s: "
+        "station lookup failed (station=%s)",
+        subentry_id,
+        station_id,
+    )
+    return None
+
+
+def _create_connection_entity(
+    hass: HomeAssistant,
+    coordinator: BelgianTrainDataUpdateCoordinator,
+    subentry_id: str,
+    subentry_data: dict,
+) -> NMBSSensor | None:
+    """Create a connection entity. Returns None if station lookup fails."""
+    station_from = find_station(hass, subentry_data[CONF_STATION_FROM])
+    station_to = find_station(hass, subentry_data[CONF_STATION_TO])
+
+    if station_from and station_to:
+        name = subentry_data.get(CONF_NAME)
+        show_on_map = subentry_data.get(CONF_SHOW_ON_MAP, False)
+        excl_vias = subentry_data.get(CONF_EXCLUDE_VIAS, False)
+
+        _LOGGER.debug(
+            "Created connection entity for %s → %s",
+            station_from.standard_name,
+            station_to.standard_name,
+        )
+        return NMBSSensor(
+            coordinator,
+            name,
+            show_on_map,
+            station_from,
+            station_to,
+            excl_vias,
+        )
+
+    _LOGGER.warning(
+        "Skipping connection entity for subentry %s: "
+        "station lookup failed (from=%s, to=%s)",
+        subentry_id,
+        subentry_data.get(CONF_STATION_FROM),
+        subentry_data.get(CONF_STATION_TO),
+    )
+    return None
+
+
+def _setup_main_entry_subentries(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddConfigEntryEntitiesCallback,
+) -> None:
+    """Set up entities for all subentries from main entry."""
+    _LOGGER.info("Processing main entry - setting up entities for all subentries")
+
+    subentry_coordinators = (
+        hass.data.get(DOMAIN, {}).get("subentry_coordinators", {})
+    )
+
+    if not subentry_coordinators:
+        _LOGGER.warning(
+            "No subentry coordinators found - no entities will be created"
+        )
+        return
+
+    entities = []
+
+    for subentry_id, coordinator in subentry_coordinators.items():
+        subentry = next(
+            (
+                s
+                for s in config_entry.subentries.values()
+                if s.subentry_id == subentry_id
+            ),
+            None,
+        )
+
+        if not subentry:
+            _LOGGER.error("Subentry %s not found in config_entry", subentry_id)
+            continue
+
+        _LOGGER.debug(
+            "Creating entities for subentry %s (type=%s)",
+            subentry_id,
+            subentry.subentry_type,
+        )
+
+        if subentry.subentry_type == SUBENTRY_TYPE_LIVEBOARD:
+            entity = _create_liveboard_entity(
+                hass, coordinator, subentry_id, subentry.data[CONF_STATION_LIVE]
+            )
+            if entity:
+                entities.append(entity)
+
+        elif subentry.subentry_type == SUBENTRY_TYPE_CONNECTION:
+            entity = _create_connection_entity(
+                hass, coordinator, subentry_id, subentry.data
+            )
+            if entity:
+                entities.append(entity)
+
+    if entities:
+        _LOGGER.debug(
+            "Adding %d entities for main entry subentries: %s",
+            len(entities),
+            [type(e).__name__ for e in entities],
+        )
+        async_add_entities(entities)
+    else:
+        _LOGGER.warning("No entities created from subentries")
+
+
+async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
@@ -89,99 +214,7 @@ async def async_setup_entry(  # noqa: PLR0911, PLR0912, PLR0915
 
     # For HA 2025.2+: Handle subentries from main entry
     if subentry_type is None and not config_entry.data:
-        # This is the main entry - process all subentries
-        _LOGGER.info("Processing main entry - setting up entities for all subentries")
-
-        subentry_coordinators = (
-            hass.data.get(DOMAIN, {}).get("subentry_coordinators", {})
-        )
-
-        if not subentry_coordinators:
-            _LOGGER.warning(
-                "No subentry coordinators found - no entities will be created"
-            )
-            return
-
-        entities = []
-
-        for subentry_id, coordinator in subentry_coordinators.items():
-            subentry = next(
-                (
-                    s
-                    for s in config_entry.subentries.values()
-                    if s.subentry_id == subentry_id
-                ),
-                None,
-            )
-
-            if not subentry:
-                _LOGGER.error("Subentry %s not found in config_entry", subentry_id)
-                continue
-
-            _LOGGER.debug(
-                "Creating entities for subentry %s (type=%s)",
-                subentry_id,
-                subentry.subentry_type,
-            )
-
-            if subentry.subentry_type == SUBENTRY_TYPE_LIVEBOARD:
-                station = find_station(hass, subentry.data[CONF_STATION_LIVE])
-                if station:
-                    entity = StandaloneLiveboardSensor(coordinator, station)
-                    entities.append(entity)
-                    _LOGGER.debug(
-                        "Created liveboard entity for %s", station.standard_name
-                    )
-                else:
-                    _LOGGER.warning(
-                        "Skipping liveboard entity for subentry %s: "
-                        "station lookup failed (station=%s)",
-                        subentry_id,
-                        subentry.data[CONF_STATION_LIVE],
-                    )
-
-            elif subentry.subentry_type == SUBENTRY_TYPE_CONNECTION:
-                station_from = find_station(hass, subentry.data[CONF_STATION_FROM])
-                station_to = find_station(hass, subentry.data[CONF_STATION_TO])
-
-                if station_from and station_to:
-                    name = subentry.data.get(CONF_NAME, None)
-                    show_on_map = subentry.data.get(CONF_SHOW_ON_MAP, False)
-                    excl_vias = subentry.data.get(CONF_EXCLUDE_VIAS, False)
-
-                    entity = NMBSSensor(
-                        coordinator,
-                        name,
-                        show_on_map,
-                        station_from,
-                        station_to,
-                        excl_vias,
-                    )
-                    entities.append(entity)
-                    _LOGGER.debug(
-                        "Created connection entity for %s → %s",
-                        station_from.standard_name,
-                        station_to.standard_name,
-                    )
-                else:
-                    _LOGGER.warning(
-                        "Skipping connection entity for subentry %s: "
-                        "station lookup failed (from=%s, to=%s)",
-                        subentry_id,
-                        subentry.data.get(CONF_STATION_FROM),
-                        subentry.data.get(CONF_STATION_TO),
-                    )
-
-        if entities:
-            _LOGGER.debug(
-                "Adding %d entities for main entry subentries: %s",
-                len(entities),
-                [type(e).__name__ for e in entities],
-            )
-            async_add_entities(entities)
-        else:
-            _LOGGER.warning("No entities created from subentries")
-
+        _setup_main_entry_subentries(hass, config_entry, async_add_entities)
         return
 
     # Skip setup for main integration entry (has ONLY initial setup data)
