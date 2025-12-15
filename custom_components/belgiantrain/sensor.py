@@ -163,6 +163,14 @@ async def async_setup_entry(  # noqa: PLR0911, PLR0912, PLR0915
                         station_from.standard_name,
                         station_to.standard_name,
                     )
+                else:
+                    _LOGGER.warning(
+                        "Skipping connection entity for subentry %s: "
+                        "station lookup failed (from=%s, to=%s)",
+                        subentry_id,
+                        subentry.data.get(CONF_STATION_FROM),
+                        subentry.data.get(CONF_STATION_TO),
+                    )
 
         if entities:
             _LOGGER.debug(

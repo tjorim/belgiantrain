@@ -619,8 +619,13 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
-    # Remove coordinator from hass.data if it exists
-    if unload_ok and DOMAIN in hass.data and "coordinators" in hass.data[DOMAIN]:
-        hass.data[DOMAIN]["coordinators"].pop(entry.entry_id, None)
+    if unload_ok and DOMAIN in hass.data:
+        # Remove coordinator from hass.data if it exists
+        if "coordinators" in hass.data[DOMAIN]:
+            hass.data[DOMAIN]["coordinators"].pop(entry.entry_id, None)
+
+        # Remove subentry coordinators if it exists
+        if "subentry_coordinators" in hass.data[DOMAIN]:
+            hass.data[DOMAIN].pop("subentry_coordinators", None)
 
     return unload_ok
