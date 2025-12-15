@@ -74,12 +74,12 @@ def _create_liveboard_entity(
     coordinator: LiveboardDataUpdateCoordinator,
     subentry_id: str,
     station_id: str,
-) -> StandaloneLiveboardSensor | None:
+) -> NMBSLiveboardSensor | None:
     """Create a liveboard entity. Returns None if station lookup fails."""
     station = find_station(hass, station_id)
     if station:
         _LOGGER.debug("Created liveboard entity for %s", station.standard_name)
-        return StandaloneLiveboardSensor(coordinator, station)
+        return NMBSLiveboardSensor(coordinator, station)
 
     _LOGGER.warning(
         "Skipping liveboard entity for subentry %s: station lookup failed (station=%s)",
@@ -94,7 +94,7 @@ def _create_connection_entity(
     coordinator: BelgianTrainDataUpdateCoordinator,
     subentry_id: str,
     subentry_data: dict,
-) -> NMBSSensor | None:
+) -> NMBSConnectionSensor | None:
     """Create a connection entity. Returns None if station lookup fails."""
     station_from = find_station(hass, subentry_data[CONF_STATION_FROM])
     station_to = find_station(hass, subentry_data[CONF_STATION_TO])
@@ -109,7 +109,7 @@ def _create_connection_entity(
             station_from.standard_name,
             station_to.standard_name,
         )
-        return NMBSSensor(
+        return NMBSConnectionSensor(
             coordinator,
             name,
             show_on_map,
@@ -284,7 +284,7 @@ async def async_setup_entry(
             return
 
         # Create standalone liveboard sensor (enabled by default)
-        entity = StandaloneLiveboardSensor(coordinator, station)
+        entity = NMBSLiveboardSensor(coordinator, station)
         _LOGGER.debug(
             "Creating standalone liveboard sensor for station %s "
             "(entry %s, entity_id will be: %s)",
@@ -311,154 +311,25 @@ async def async_setup_entry(
         )
         return
 
-    # setup the connection sensor and liveboards
+    # setup the connection sensor
     _LOGGER.debug(
         "Creating connection sensor from %s to %s",
         station_from.standard_name,
         station_to.standard_name,
     )
-    entities = [
-        NMBSSensor(coordinator, name, show_on_map, station_from, station_to, excl_vias),
-    ]
-
-    # For legacy entries (no subentry_type), also create disabled liveboards
-    # to maintain backward compatibility
-    if subentry_type is None:
-        _LOGGER.debug("Also creating legacy liveboard sensors (disabled by default)")
-        entities.extend(
-            [
-                NMBSLiveBoard(
-                    coordinator, station_from, station_from, station_to, excl_vias
-                ),
-                NMBSLiveBoard(
-                    coordinator, station_to, station_from, station_to, excl_vias
-                ),
-            ]
-        )
+    entity = NMBSConnectionSensor(
+        coordinator, name, show_on_map, station_from, station_to, excl_vias
+    )
 
     _LOGGER.debug(
-        "Adding %d entities to Home Assistant for entry %s: %s",
-        len(entities),
+        "Adding connection entity to Home Assistant for entry %s: %s",
         config_entry.entry_id,
-        [type(e).__name__ for e in entities],
+        type(entity).__name__,
     )
-    async_add_entities(entities)
+    async_add_entities([entity])
 
 
-class NMBSLiveBoard(BelgianTrainEntity, SensorEntity):
-    """Get the next train from a station's liveboard."""
-
-    _attr_attribution = "https://api.irail.be/"
-
-    def __init__(
-        self,
-        coordinator: BelgianTrainDataUpdateCoordinator,
-        live_station: StationDetails,
-        station_from: StationDetails,
-        station_to: StationDetails,
-        excl_vias: bool,  # noqa: FBT001
-    ) -> None:
-        """Initialize the sensor for getting liveboard data."""
-        super().__init__(coordinator)
-        self._station = live_station
-        self._station_from = station_from
-        self._station_to = station_to
-
-        self._excl_vias = excl_vias
-        self._attrs: LiveboardDeparture | None = None
-
-        self._state: str | None = None
-
-        self.entity_registry_enabled_default = False
-
-    @property
-    def name(self) -> str:
-        """Return the sensor default name."""
-        return f"Trains in {self._station.standard_name}"
-
-    @property
-    def unique_id(self) -> str:
-        """Return the unique ID."""
-        unique_id = f"{self._station.id}_{self._station_from.id}_{self._station_to.id}"
-        vias = "_excl_vias" if self._excl_vias else ""
-        return f"belgiantrain_live_{unique_id}{vias}"
-
-    @property
-    def icon(self) -> str:
-        """Return the default icon or an alert icon if delays."""
-        if self._attrs:
-            delay = getattr(self._attrs, "delay", 0)
-            if delay and int(delay) > 0:
-                return DEFAULT_ICON_ALERT
-
-        return DEFAULT_ICON
-
-    @property
-    def native_value(self) -> str | None:
-        """Return sensor state."""
-        return self._state
-
-    @property
-    def extra_state_attributes(self) -> dict[str, Any] | None:
-        """Return the sensor attributes if data is available."""
-        if self._state is None or not self._attrs:
-            return None
-
-        delay = get_delay_in_minutes(self._attrs.delay)
-        departure = get_time_until(self._attrs.time)
-
-        attrs = {
-            "departure": f"In {departure} minutes",
-            "departure_minutes": departure,
-            "extra_train": self._attrs.is_extra,
-            "vehicle_id": self._attrs.vehicle,
-            "monitored_station": self._station.standard_name,
-        }
-
-        if delay > 0:
-            attrs["delay"] = f"{delay} minutes"
-            attrs["delay_minutes"] = delay
-
-        return attrs
-
-    def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator."""
-        if self.coordinator.data is None:
-            _LOGGER.warning("Coordinator data not available")
-            self._state = None
-            self._attrs = None
-            self.async_write_ha_state()
-            return
-
-        # Determine which liveboard to use based on station
-        if self._station.id == self.coordinator.station_from.id:
-            liveboard = self.coordinator.data.get("liveboard_from")
-        else:
-            liveboard = self.coordinator.data.get("liveboard_to")
-
-        if liveboard is None:
-            _LOGGER.warning("Liveboard data not available in coordinator")
-            self._state = None
-            self._attrs = None
-            self.async_write_ha_state()
-            return
-
-        if not (departures := liveboard.departures):
-            _LOGGER.warning("API returned invalid departures: %r", liveboard)
-            self._state = None
-            self._attrs = None
-            self.async_write_ha_state()
-            return
-
-        _LOGGER.debug("Processing departures from coordinator: %r", departures)
-        next_departure = departures[0]
-
-        self._attrs = next_departure
-        self._state = f"Track {next_departure.platform} - {next_departure.station}"
-        self.async_write_ha_state()
-
-
-class NMBSSensor(BelgianTrainEntity, SensorEntity):
+class NMBSConnectionSensor(BelgianTrainEntity, SensorEntity):
     """Get the total travel time for a given connection."""
 
     _attr_attribution = "https://api.irail.be/"
@@ -624,7 +495,8 @@ class NMBSSensor(BelgianTrainEntity, SensorEntity):
 
         if self._excl_vias and self.is_via_connection:
             _LOGGER.debug(
-                "Skipping update of NMBSSensor because this connection is a via"
+                "Skipping update of NMBSConnectionSensor "
+                "because this connection is a via"
             )
             self.async_write_ha_state()
             return
@@ -639,8 +511,8 @@ class NMBSSensor(BelgianTrainEntity, SensorEntity):
         self.async_write_ha_state()
 
 
-class StandaloneLiveboardSensor(BelgianTrainEntity, SensorEntity):
-    """Standalone liveboard sensor for a single station."""
+class NMBSLiveboardSensor(BelgianTrainEntity, SensorEntity):
+    """Liveboard sensor for a single station."""
 
     _attr_attribution = "https://api.irail.be/"
 

@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 if TYPE_CHECKING:
-    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.config_entries import ConfigEntry, ConfigSubentry
     from homeassistant.core import HomeAssistant
     from pyrail import iRail
     from pyrail.models import StationDetails
@@ -21,14 +21,14 @@ _LOGGER = logging.getLogger(__name__)
 class LiveboardDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Class to manage fetching liveboard data for a single station from the API."""
 
-    config_entry: ConfigEntry
+    config_entry: ConfigEntry | ConfigSubentry
 
     def __init__(
         self,
         hass: HomeAssistant,
         api_client: iRail,
         station: StationDetails,
-        config_entry: ConfigEntry,
+        config_entry: ConfigEntry | ConfigSubentry,
     ) -> None:
         """Initialize the coordinator."""
         self.api_client = api_client
@@ -63,7 +63,7 @@ class LiveboardDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 class BelgianTrainDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Class to manage fetching Belgian train data from the API."""
 
-    config_entry: ConfigEntry
+    config_entry: ConfigEntry | ConfigSubentry
 
     def __init__(
         self,
@@ -71,7 +71,7 @@ class BelgianTrainDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         api_client: iRail,
         station_from: StationDetails,
         station_to: StationDetails,
-        config_entry: ConfigEntry,
+        config_entry: ConfigEntry | ConfigSubentry,
     ) -> None:
         """Initialize the coordinator."""
         self.api_client = api_client
