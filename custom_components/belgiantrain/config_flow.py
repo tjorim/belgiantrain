@@ -31,6 +31,8 @@ from .const import (
     CONF_STATION_FROM,
     CONF_STATION_LIVE,
     CONF_STATION_TO,
+    CONFIG_ENTRY_PREFIX_CONNECTION,
+    CONFIG_ENTRY_PREFIX_LIVEBOARD,
     DOMAIN,
     SUBENTRY_TYPE_CONNECTION,
     SUBENTRY_TYPE_LIVEBOARD,
@@ -249,7 +251,7 @@ class ConnectionFlowHandler(ConfigSubentryFlow):
         station_name: str,
     ) -> None:
         """Create a liveboard subentry if it doesn't already exist."""
-        liveboard_unique_id = f"config_liveboard_{station_id}"
+        liveboard_unique_id = f"{CONFIG_ENTRY_PREFIX_LIVEBOARD}{station_id}"
 
         # Check if liveboard already exists
         liveboard_exists = any(
@@ -314,7 +316,9 @@ class ConnectionFlowHandler(ConfigSubentryFlow):
         vias = "_excl_vias" if excl_vias else ""
         station_from_id = user_input[CONF_STATION_FROM]
         station_to_id = user_input[CONF_STATION_TO]
-        unique_id = f"config_connection_{station_from_id}_{station_to_id}{vias}"
+        unique_id = (
+            f"{CONFIG_ENTRY_PREFIX_CONNECTION}{station_from_id}_{station_to_id}{vias}"
+        )
 
         for entry in self.hass.config_entries.async_entries(DOMAIN):
             for subentry in entry.subentries.values():
@@ -392,7 +396,7 @@ class ConnectionFlowHandler(ConfigSubentryFlow):
             station_from_id = self.connection_data[CONF_STATION_FROM]
             station_to_id = self.connection_data[CONF_STATION_TO]
             unique_id = (
-                f"config_connection_{station_from_id}_{station_to_id}{vias}"
+                f"{CONFIG_ENTRY_PREFIX_CONNECTION}{station_from_id}_{station_to_id}{vias}"
             )
 
             # Get parent entry directly from context (more efficient)
@@ -454,7 +458,7 @@ class LiveboardFlowHandler(ConfigSubentryFlow):
 
     def _check_duplicate_liveboard(self, station_id: str) -> SubentryFlowResult | None:
         """Check if liveboard already exists. Returns abort result if duplicate."""
-        unique_id = f"config_liveboard_{station_id}"
+        unique_id = f"{CONFIG_ENTRY_PREFIX_LIVEBOARD}{station_id}"
         for entry in self.hass.config_entries.async_entries(DOMAIN):
             for subentry in entry.subentries.values():
                 if subentry.unique_id == unique_id:
@@ -523,7 +527,7 @@ class LiveboardFlowHandler(ConfigSubentryFlow):
                 return self.async_create_entry(
                     title=f"Liveboard - {station.standard_name}",
                     data={CONF_STATION_LIVE: station_id},
-                    unique_id=f"config_liveboard_{station_id}",
+                    unique_id=f"{CONFIG_ENTRY_PREFIX_LIVEBOARD}{station_id}",
                 )
 
         # Fetch station choices

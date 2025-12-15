@@ -17,6 +17,8 @@ from .const import (
     CONF_STATION_FROM,
     CONF_STATION_LIVE,
     CONF_STATION_TO,
+    CONFIG_ENTRY_PREFIX_CONNECTION,
+    CONFIG_ENTRY_PREFIX_LIVEBOARD,
     DOMAIN,
     SUBENTRY_TYPE_CONNECTION,
     SUBENTRY_TYPE_LIVEBOARD,
@@ -289,7 +291,7 @@ def _create_connection_subentry_from_data(
         return False
 
     conn_id = f"{station_from_id}_{station_to_id}"
-    unique_id = f"config_connection_{conn_id}{vias}"
+    unique_id = f"{CONFIG_ENTRY_PREFIX_CONNECTION}{conn_id}{vias}"
 
     # Check if subentry already exists
     subentry_exists = any(
@@ -326,7 +328,7 @@ def _create_liveboard_subentry(
     if not station:
         return False
 
-    unique_id = f"config_liveboard_{station_id}"
+    unique_id = f"{CONFIG_ENTRY_PREFIX_LIVEBOARD}{station_id}"
 
     # Check if subentry already exists
     subentry_exists = any(
@@ -612,7 +614,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if "coordinators" in hass.data[DOMAIN]:
             hass.data[DOMAIN]["coordinators"].pop(entry.entry_id, None)
 
-        # Remove all subentry coordinators (integration only supports one main entry)
+        # Remove all subentry coordinators
+        # Safe to remove entire dict: integration enforces single main entry
         if "subentry_coordinators" in hass.data[DOMAIN]:
             hass.data[DOMAIN].pop("subentry_coordinators", None)
 
