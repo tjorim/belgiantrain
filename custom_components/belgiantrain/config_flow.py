@@ -220,6 +220,17 @@ class NMBSConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
+    @classmethod
+    @callback
+    def async_get_supported_subentry_types(
+        cls, _config_entry: ConfigEntry
+    ) -> dict[str, type[ConfigSubentryFlow]]:
+        """Return subentries supported by this handler."""
+        return {
+            SUBENTRY_TYPE_CONNECTION: ConnectionFlowHandler,
+            SUBENTRY_TYPE_LIVEBOARD: LiveboardFlowHandler,
+        }
+
 
 class ConnectionFlowHandler(ConfigSubentryFlow):
     """Handle subentry flow for connection sensors."""
@@ -311,19 +322,21 @@ class ConnectionFlowHandler(ConfigSubentryFlow):
                     self.connection_data = user_input
                     return await self.async_step_liveboards()
 
-        # Fetch station choices
-        try:
-            api_client = iRail(session=async_get_clientsession(self.hass))
-            stations_response = await api_client.get_stations()
-            if stations_response is None:
+        # Fetch station choices (reuse if already fetched for validation)
+        if not self.stations:
+            try:
+                api_client = iRail(session=async_get_clientsession(self.hass))
+                stations_response = await api_client.get_stations()
+                if stations_response is None:
+                    return self.async_abort(reason="api_unavailable")
+                self.stations = stations_response.stations
+            except CannotConnectError:
                 return self.async_abort(reason="api_unavailable")
 
-            choices = [
-                SelectOptionDict(value=station.id, label=station.standard_name)
-                for station in stations_response.stations
-            ]
-        except CannotConnectError:
-            return self.async_abort(reason="api_unavailable")
+        choices = [
+            SelectOptionDict(value=station.id, label=station.standard_name)
+            for station in self.stations
+        ]
 
         schema = vol.Schema(
             {
@@ -371,21 +384,24 @@ class ConnectionFlowHandler(ConfigSubentryFlow):
                 self.context["parent_entry_id"]
             )
 
-            # Create liveboard subentries if requested
-            if main_entry is not None:
-                if user_input.get("add_departure_liveboard", False):
-                    self._create_liveboard_if_needed(
-                        main_entry,
-                        station_from_id,
-                        self.station_from.standard_name,
-                    )
+            # Verify parent entry exists (should always exist in subentry flow)
+            if main_entry is None:
+                return self.async_abort(reason="invalid_state")
 
-                if user_input.get("add_arrival_liveboard", False):
-                    self._create_liveboard_if_needed(
-                        main_entry,
-                        station_to_id,
-                        self.station_to.standard_name,
-                    )
+            # Create liveboard subentries if requested
+            if user_input.get("add_departure_liveboard", False):
+                self._create_liveboard_if_needed(
+                    main_entry,
+                    station_from_id,
+                    self.station_from.standard_name,
+                )
+
+            if user_input.get("add_arrival_liveboard", False):
+                self._create_liveboard_if_needed(
+                    main_entry,
+                    station_to_id,
+                    self.station_to.standard_name,
+                )
 
             # Create the connection subentry
             return self.async_create_entry(
@@ -480,23 +496,6 @@ class LiveboardFlowHandler(ConfigSubentryFlow):
             data_schema=schema,
             errors=errors,
         )
-
-# Add the method to the class after both handlers are defined
-@classmethod
-@callback
-def _async_get_supported_subentry_types(
-    _cls: type[NMBSConfigFlow], _config_entry: ConfigEntry
-) -> dict[str, type[ConfigSubentryFlow]]:
-    """Return subentries supported by this handler."""
-    return {
-        SUBENTRY_TYPE_CONNECTION: ConnectionFlowHandler,
-        SUBENTRY_TYPE_LIVEBOARD: LiveboardFlowHandler,
-    }
-
-# Dynamically add the method to NMBSConfigFlow
-NMBSConfigFlow.async_get_supported_subentry_types = (
-    _async_get_supported_subentry_types  # type: ignore[method-assign]
-)
 
 
 class CannotConnectError(Exception):
