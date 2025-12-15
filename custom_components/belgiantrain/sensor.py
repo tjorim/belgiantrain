@@ -74,12 +74,12 @@ def _create_liveboard_entity(
     coordinator: LiveboardDataUpdateCoordinator,
     subentry_id: str,
     station_id: str,
-) -> NMBSLiveboardSensor | None:
+) -> BelgianTrainLiveboardSensor | None:
     """Create a liveboard entity. Returns None if station lookup fails."""
     station = find_station(hass, station_id)
     if station:
         _LOGGER.debug("Created liveboard entity for %s", station.standard_name)
-        return NMBSLiveboardSensor(coordinator, station)
+        return BelgianTrainLiveboardSensor(coordinator, station)
 
     _LOGGER.warning(
         "Skipping liveboard entity for subentry %s: station lookup failed (station=%s)",
@@ -94,7 +94,7 @@ def _create_connection_entity(
     coordinator: BelgianTrainDataUpdateCoordinator,
     subentry_id: str,
     subentry_data: dict,
-) -> NMBSConnectionSensor | None:
+) -> BelgianTrainConnectionSensor | None:
     """Create a connection entity. Returns None if station lookup fails."""
     station_from = find_station(hass, subentry_data[CONF_STATION_FROM])
     station_to = find_station(hass, subentry_data[CONF_STATION_TO])
@@ -109,7 +109,7 @@ def _create_connection_entity(
             station_from.standard_name,
             station_to.standard_name,
         )
-        return NMBSConnectionSensor(
+        return BelgianTrainConnectionSensor(
             coordinator,
             name,
             show_on_map,
@@ -284,7 +284,7 @@ async def async_setup_entry(
             return
 
         # Create standalone liveboard sensor (enabled by default)
-        entity = NMBSLiveboardSensor(coordinator, station)
+        entity = BelgianTrainLiveboardSensor(coordinator, station)
         _LOGGER.debug(
             "Creating standalone liveboard sensor for station %s "
             "(entry %s, entity_id will be: %s)",
@@ -317,7 +317,7 @@ async def async_setup_entry(
         station_from.standard_name,
         station_to.standard_name,
     )
-    entity = NMBSConnectionSensor(
+    entity = BelgianTrainConnectionSensor(
         coordinator, name, show_on_map, station_from, station_to, excl_vias
     )
 
@@ -329,7 +329,7 @@ async def async_setup_entry(
     async_add_entities([entity])
 
 
-class NMBSConnectionSensor(BelgianTrainEntity, SensorEntity):
+class BelgianTrainConnectionSensor(BelgianTrainEntity, SensorEntity):
     """Get the total travel time for a given connection."""
 
     _attr_attribution = "https://api.irail.be/"
@@ -495,7 +495,7 @@ class NMBSConnectionSensor(BelgianTrainEntity, SensorEntity):
 
         if self._excl_vias and self.is_via_connection:
             _LOGGER.debug(
-                "Skipping update of NMBSConnectionSensor "
+                "Skipping update of BelgianTrainConnectionSensor "
                 "because this connection is a via"
             )
             self.async_write_ha_state()
@@ -511,7 +511,7 @@ class NMBSConnectionSensor(BelgianTrainEntity, SensorEntity):
         self.async_write_ha_state()
 
 
-class NMBSLiveboardSensor(BelgianTrainEntity, SensorEntity):
+class BelgianTrainLiveboardSensor(BelgianTrainEntity, SensorEntity):
     """Liveboard sensor for a single station."""
 
     _attr_attribution = "https://api.irail.be/"

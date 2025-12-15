@@ -16,7 +16,7 @@ from custom_components.belgiantrain.const import (
     DOMAIN,
 )
 from custom_components.belgiantrain.sensor import (
-    NMBSConnectionSensor,
+    BelgianTrainConnectionSensor,
     get_delay_in_minutes,
     get_ride_duration,
     get_time_until,
@@ -73,7 +73,7 @@ async def test_sensor_setup(hass: HomeAssistant, mock_stations, mock_config_entr
 
         # Should create 1 connection sensor (no legacy liveboards for HA 2025.2+)
         assert len(entities) == 1
-        assert isinstance(entities[0], NMBSConnectionSensor)
+        assert isinstance(entities[0], BelgianTrainConnectionSensor)
 
 
 async def test_sensor_setup_missing_station(hass: HomeAssistant, mock_config_entry):
@@ -96,7 +96,7 @@ async def test_sensor_setup_missing_station(hass: HomeAssistant, mock_config_ent
 
 
 async def test_nmbs_sensor_update(hass: HomeAssistant, mock_stations):
-    """Test NMBSConnectionSensor update method."""
+    """Test BelgianTrainConnectionSensor update method."""
     # Create mock API client
     mock_api = AsyncMock()
 
@@ -127,7 +127,7 @@ async def test_nmbs_sensor_update(hass: HomeAssistant, mock_stations):
     mock_api.get_connections.return_value = mock_connections
 
     # Create sensor
-    sensor = NMBSConnectionSensor(
+    sensor = BelgianTrainConnectionSensor(
         mock_api,
         "Test Sensor",
         True,
@@ -156,7 +156,7 @@ async def test_nmbs_sensor_update(hass: HomeAssistant, mock_stations):
 
 
 async def test_nmbs_sensor_with_via(hass: HomeAssistant, mock_stations):
-    """Test NMBSConnectionSensor with via connections."""
+    """Test BelgianTrainConnectionSensor with via connections."""
     mock_api = AsyncMock()
 
     # Create mock connection with via
@@ -192,7 +192,7 @@ async def test_nmbs_sensor_with_via(hass: HomeAssistant, mock_stations):
     mock_api.get_connections.return_value = mock_connections
 
     # Create sensor with exclude_vias=False
-    sensor = NMBSConnectionSensor(
+    sensor = BelgianTrainConnectionSensor(
         mock_api,
         "Test Sensor",
         False,
@@ -212,7 +212,7 @@ async def test_nmbs_sensor_with_via(hass: HomeAssistant, mock_stations):
 
 
 async def test_nmbs_sensor_exclude_vias(hass: HomeAssistant, mock_stations):
-    """Test NMBSConnectionSensor with exclude_vias enabled."""
+    """Test BelgianTrainConnectionSensor with exclude_vias enabled."""
     mock_api = AsyncMock()
 
     # Create mock connection with via
@@ -237,7 +237,7 @@ async def test_nmbs_sensor_exclude_vias(hass: HomeAssistant, mock_stations):
     mock_api.get_connections.return_value = mock_connections
 
     # Create sensor with exclude_vias=True
-    sensor = NMBSConnectionSensor(
+    sensor = BelgianTrainConnectionSensor(
         mock_api,
         "Test Sensor",
         False,
@@ -288,7 +288,7 @@ def test_get_ride_duration():
 
 
 async def test_nmbs_sensor_connection_already_left(hass: HomeAssistant, mock_stations):
-    """Test NMBSConnectionSensor when first connection has already left."""
+    """Test BelgianTrainConnectionSensor when first connection has already left."""
     mock_api = AsyncMock()
 
     # First connection has left
@@ -321,7 +321,7 @@ async def test_nmbs_sensor_connection_already_left(hass: HomeAssistant, mock_sta
 
     mock_api.get_connections.return_value = mock_connections
 
-    sensor = NMBSConnectionSensor(
+    sensor = BelgianTrainConnectionSensor(
         mock_api,
         "Test Sensor",
         False,
