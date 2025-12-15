@@ -78,7 +78,7 @@ async def async_setup_entry(
     # Cache subentry_type for backward compatibility with HA < 2025.2
     subentry_type = getattr(config_entry, "subentry_type", None)
 
-    _LOGGER.warning(
+    _LOGGER.debug(
         "SENSOR PLATFORM CALLED for entry %s (subentry_type=%s, data=%s, "
         "has_runtime_data=%s)",
         config_entry.entry_id,
@@ -145,7 +145,7 @@ async def async_setup_entry(
                     )
 
         if entities:
-            _LOGGER.warning(
+            _LOGGER.info(
                 "Adding %d entities for main entry subentries: %s",
                 len(entities),
                 [type(e).__name__ for e in entities],

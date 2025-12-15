@@ -40,7 +40,7 @@
             "invalid_station": "Invalid station selection. Please try again."
         },
         "abort": {
-            "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
+            "already_configured": "This integration is already configured",
             "single_instance_allowed": "[%key:common::config_flow::abort::single_instance_allowed%]",
             "api_unavailable": "The iRail API is currently unavailable. Please try again later."
         }

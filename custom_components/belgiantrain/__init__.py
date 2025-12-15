@@ -293,7 +293,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
             CONF_STATION_FROM in entry.data and CONF_STATION_TO in entry.data
         )
 
-        _LOGGER.warning(
+        _LOGGER.debug(
             "Main entry detected: is_legacy=%s, entry.data=%s, has_subentries=%d",
             is_legacy_connection,
             entry.data,
@@ -423,7 +423,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                     return False
 
             # Main entry coordinates all subentries
-            _LOGGER.warning(
+            _LOGGER.debug(
                 "Processing subentries from main entry. Subentries available: %d",
                 len(entry.subentries),
             )
