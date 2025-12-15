@@ -6,22 +6,16 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    ConfigSubentry,
+    ConfigSubentryFlow,
+    SubentryFlowResult,
+)
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-
-# ConfigSubentryFlow is only available in Home Assistant 2025.2+
-try:
-    from homeassistant.config_entries import (
-        ConfigSubentry,
-        ConfigSubentryFlow,
-        SubentryFlowResult,
-    )
-except ImportError:
-    # Fallback for older versions - this won't be used but prevents import errors
-    ConfigSubentry = None  # type: ignore[misc,assignment]
-    ConfigSubentryFlow = None  # type: ignore[misc,assignment]
-    SubentryFlowResult = None  # type: ignore[misc,assignment]
 from homeassistant.helpers.selector import (
     BooleanSelector,
     SelectOptionDict,
@@ -227,55 +221,52 @@ class NMBSConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-if ConfigSubentryFlow is not None:
+class ConnectionFlowHandler(ConfigSubentryFlow):
+    """Handle subentry flow for connection sensors."""
 
-    class ConnectionFlowHandler(ConfigSubentryFlow):
-        """Handle subentry flow for connection sensors."""
+    def __init__(self) -> None:
+        """Initialize."""
+        self.connection_data: dict[str, Any] = {}
+        self.stations: list[StationDetails] = []
+        self.station_from: StationDetails | None = None
+        self.station_to: StationDetails | None = None
 
-        def __init__(self) -> None:
-            """Initialize."""
-            self.connection_data: dict[str, Any] = {}
-            self.stations: list[StationDetails] = []
-            self.station_from: StationDetails | None = None
-            self.station_to: StationDetails | None = None
+    def _create_liveboard_if_needed(
+        self,
+        main_entry: ConfigEntry,
+        station_id: str,
+        station_name: str,
+    ) -> None:
+        """Create a liveboard subentry if it doesn't already exist."""
+        liveboard_unique_id = f"liveboard_{station_id}"
 
-        def _create_liveboard_if_needed(
-            self,
-            main_entry: ConfigEntry,
-            station_id: str,
-            station_name: str,
-        ) -> None:
-            """Create a liveboard subentry if it doesn't already exist."""
-            liveboard_unique_id = f"liveboard_{station_id}"
+        # Check if liveboard already exists
+        liveboard_exists = any(
+            sub.unique_id == liveboard_unique_id
+            for sub in main_entry.subentries.values()
+        )
 
-            # Check if liveboard already exists
-            liveboard_exists = any(
-                sub.unique_id == liveboard_unique_id
-                for sub in main_entry.subentries.values()
+        if not liveboard_exists:
+            liveboard_data = {CONF_STATION_LIVE: station_id}
+            liveboard_subentry = ConfigSubentry(
+                data=MappingProxyType(liveboard_data),
+                unique_id=liveboard_unique_id,
+                subentry_type=SUBENTRY_TYPE_LIVEBOARD,
+                title=f"Liveboard - {station_name}",
+            )
+            self.hass.config_entries.async_add_subentry(
+                main_entry, liveboard_subentry
             )
 
-            if not liveboard_exists:
-                liveboard_data = {CONF_STATION_LIVE: station_id}
-                liveboard_subentry = ConfigSubentry(
-                    data=MappingProxyType(liveboard_data),
-                    unique_id=liveboard_unique_id,
-                    subentry_type=SUBENTRY_TYPE_LIVEBOARD,
-                    title=f"Liveboard - {station_name}",
-                )
-                self.hass.config_entries.async_add_subentry(
-                    main_entry, liveboard_subentry
-                )
+    async def async_step_user(  # noqa: PLR0911
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Handle the step to setup a connection between 2 stations."""
+        errors: dict = {}
 
-        async def async_step_user(  # noqa: PLR0911
-            self, user_input: dict[str, Any] | None = None
-        ) -> SubentryFlowResult:
-            """Handle the step to setup a connection between 2 stations."""
-            errors: dict = {}
-
-            if user_input is not None and not self.connection_data:
-                if user_input[CONF_STATION_FROM] == user_input[CONF_STATION_TO]:
-                    errors["base"] = "same_station"
-                else:
+        if user_input is not None and not self.connection_data:
+            if user_input[CONF_STATION_FROM] == user_input[CONF_STATION_TO]:
+                errors["base"] = "same_station"
                     # Fetch stations for validation
                     try:
                         api_client = iRail(
@@ -505,11 +496,6 @@ if ConfigSubentryFlow is not None:
     NMBSConfigFlow.async_get_supported_subentry_types = (
         _async_get_supported_subentry_types  # type: ignore[method-assign]
     )
-
-else:
-    # Fallback classes when ConfigSubentryFlow is not available
-    ConnectionFlowHandler = None  # type: ignore[assignment,misc]
-    LiveboardFlowHandler = None  # type: ignore[assignment,misc]
 
 
 class CannotConnectError(Exception):
