@@ -22,10 +22,6 @@ CONF_SHOW_ON_MAP = "show_on_map"
 SUBENTRY_TYPE_CONNECTION: Final = "connection"
 SUBENTRY_TYPE_LIVEBOARD: Final = "liveboard"
 
-# Config entry unique ID prefixes
-CONFIG_ENTRY_PREFIX_CONNECTION: Final = "config_connection_"
-CONFIG_ENTRY_PREFIX_LIVEBOARD: Final = "config_liveboard_"
-
 
 def find_station_by_name(
     hass: "HomeAssistant", station_name: str
