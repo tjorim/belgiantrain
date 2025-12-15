@@ -466,7 +466,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                     )
                     return False
 
-            # For HA 2025.2+: Main entry enables subentries (no platforms)
+            # For HA 2025.2+: Main entry coordinates subentries
             # For HA < 2025.2: Main entry has coordinator and needs platforms
             if _ConfigSubentry is not None:
                 # Clean up initial setup data once subentries are created
@@ -489,10 +489,64 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                         "Cleaned up initial setup data from main entry: %s",
                         removed_keys,
                     )
-                _LOGGER.info(
-                    "Main SNCB/NMBS integration entry set up successfully "
-                    "(subentries will load separately)"
-                )
+
+                # Create coordinators for all existing subentries
+                # This is the key: we handle subentries in the main entry, not separately
+                api_client = iRail(session=async_get_clientsession(hass))
+                subentry_coordinators = {}
+
+                for subentry in entry.subentries.values():
+                    _LOGGER.debug(
+                        "Processing subentry: %s (type=%s, data=%s)",
+                        subentry.subentry_id,
+                        subentry.subentry_type,
+                        subentry.data,
+                    )
+
+                    if subentry.subentry_type == SUBENTRY_TYPE_CONNECTION:
+                        station_from = find_station(hass, subentry.data[CONF_STATION_FROM])
+                        station_to = find_station(hass, subentry.data[CONF_STATION_TO])
+
+                        if station_from and station_to:
+                            coordinator = BelgianTrainDataUpdateCoordinator(
+                                hass, api_client, station_from, station_to, subentry
+                            )
+                            await coordinator.async_config_entry_first_refresh()
+                            subentry_coordinators[subentry.subentry_id] = coordinator
+                            _LOGGER.debug(
+                                "Created coordinator for connection subentry: %s → %s",
+                                station_from.standard_name,
+                                station_to.standard_name,
+                            )
+
+                    elif subentry.subentry_type == SUBENTRY_TYPE_LIVEBOARD:
+                        station = find_station(hass, subentry.data[CONF_STATION_LIVE])
+
+                        if station:
+                            coordinator = LiveboardDataUpdateCoordinator(
+                                hass, api_client, station, subentry
+                            )
+                            await coordinator.async_config_entry_first_refresh()
+                            subentry_coordinators[subentry.subentry_id] = coordinator
+                            _LOGGER.debug(
+                                "Created coordinator for liveboard subentry: %s",
+                                station.standard_name,
+                            )
+
+                # Store subentry coordinators in hass.data for sensor platform to access
+                if subentry_coordinators:
+                    hass.data[DOMAIN]["subentry_coordinators"] = subentry_coordinators
+                    _LOGGER.info(
+                        "Created %d subentry coordinators, forwarding to platforms",
+                        len(subentry_coordinators),
+                    )
+                    # Forward platforms to main entry - sensor platform will handle subentries
+                    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+                else:
+                    _LOGGER.info(
+                        "No subentries found yet (initial setup or all removed)"
+                    )
+
                 return True
             # Fallback: Set up platforms for the main entry (HA < 2025.2)
             # Only forward platforms if a coordinator was actually created

@@ -86,6 +86,75 @@ async def async_setup_entry(
         hasattr(config_entry, "runtime_data"),
     )
 
+    # For HA 2025.2+: Handle subentries from main entry
+    if subentry_type is None and not config_entry.data:
+        # This is the main entry - process all subentries
+        _LOGGER.info("Processing main entry - setting up entities for all subentries")
+
+        subentry_coordinators = hass.data.get(DOMAIN, {}).get("subentry_coordinators", {})
+
+        if not subentry_coordinators:
+            _LOGGER.warning("No subentry coordinators found - no entities will be created")
+            return
+
+        entities = []
+
+        for subentry_id, coordinator in subentry_coordinators.items():
+            subentry = next(
+                (s for s in config_entry.subentries.values() if s.subentry_id == subentry_id),
+                None,
+            )
+
+            if not subentry:
+                _LOGGER.error("Subentry %s not found in config_entry", subentry_id)
+                continue
+
+            _LOGGER.debug(
+                "Creating entities for subentry %s (type=%s)",
+                subentry_id,
+                subentry.subentry_type,
+            )
+
+            if subentry.subentry_type == SUBENTRY_TYPE_LIVEBOARD:
+                station = find_station(hass, subentry.data[CONF_STATION_LIVE])
+                if station:
+                    entity = StandaloneLiveboardSensor(coordinator, station)
+                    entities.append(entity)
+                    _LOGGER.debug(
+                        "Created liveboard entity for %s", station.standard_name
+                    )
+
+            elif subentry.subentry_type == SUBENTRY_TYPE_CONNECTION:
+                station_from = find_station(hass, subentry.data[CONF_STATION_FROM])
+                station_to = find_station(hass, subentry.data[CONF_STATION_TO])
+
+                if station_from and station_to:
+                    name = subentry.data.get(CONF_NAME, None)
+                    show_on_map = subentry.data.get(CONF_SHOW_ON_MAP, False)
+                    excl_vias = subentry.data.get(CONF_EXCLUDE_VIAS, False)
+
+                    entity = NMBSSensor(
+                        coordinator, name, show_on_map, station_from, station_to, excl_vias
+                    )
+                    entities.append(entity)
+                    _LOGGER.debug(
+                        "Created connection entity for %s → %s",
+                        station_from.standard_name,
+                        station_to.standard_name,
+                    )
+
+        if entities:
+            _LOGGER.warning(
+                "Adding %d entities for main entry subentries: %s",
+                len(entities),
+                [type(e).__name__ for e in entities],
+            )
+            async_add_entities(entities)
+        else:
+            _LOGGER.warning("No entities created from subentries")
+
+        return
+
     # Skip setup for main integration entry (has ONLY initial setup data)
     # This check allows entries with both initial AND station data
     # (which happens in the HA < 2025.2 fallback path)
