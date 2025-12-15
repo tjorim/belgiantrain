@@ -77,11 +77,13 @@ async def async_setup_entry(
     # Cache subentry_type for backward compatibility with HA < 2025.2
     subentry_type = getattr(config_entry, "subentry_type", None)
 
-    _LOGGER.debug(
-        "Sensor setup for entry %s (subentry_type=%s, data=%s)",
+    _LOGGER.warning(
+        "SENSOR PLATFORM CALLED for entry %s (subentry_type=%s, data=%s, "
+        "has_runtime_data=%s)",
         config_entry.entry_id,
         subentry_type,
         config_entry.data,
+        hasattr(config_entry, "runtime_data"),
     )
 
     # Skip setup for main integration entry (has ONLY initial setup data)
@@ -105,18 +107,42 @@ async def async_setup_entry(
             return
 
     # Get coordinator from runtime_data if available, else from hass.data (legacy)
-    coordinator = (
-        config_entry.runtime_data.coordinator
-        if hasattr(config_entry, "runtime_data") and config_entry.runtime_data
-        else hass.data.get(DOMAIN, {})
-        .get("coordinators", {})
-        .get(config_entry.entry_id)
-    )
+    coordinator = None
+
+    # Try runtime_data first (modern approach)
+    if hasattr(config_entry, "runtime_data"):
+        try:
+            coordinator = config_entry.runtime_data.coordinator
+            _LOGGER.debug(
+                "Found coordinator in runtime_data for entry %s",
+                config_entry.entry_id,
+            )
+        except AttributeError:
+            _LOGGER.debug(
+                "runtime_data exists but has no coordinator attribute for entry %s",
+                config_entry.entry_id,
+            )
+
+    # Fallback to hass.data (legacy)
+    if coordinator is None:
+        coordinator = (
+            hass.data.get(DOMAIN, {})
+            .get("coordinators", {})
+            .get(config_entry.entry_id)
+        )
+        if coordinator:
+            _LOGGER.debug(
+                "Found coordinator in hass.data for entry %s",
+                config_entry.entry_id,
+            )
 
     if coordinator is None:
         _LOGGER.error(
-            "No coordinator found for entry '%s'. Aborting sensor setup.",
+            "No coordinator found for entry '%s' (subentry_type=%s, data=%s). "
+            "Aborting sensor setup.",
             config_entry.entry_id,
+            subentry_type,
+            config_entry.data,
         )
         return
 
@@ -134,10 +160,14 @@ async def async_setup_entry(
             return
 
         # Create standalone liveboard sensor (enabled by default)
-        _LOGGER.debug(
-            "Creating standalone liveboard sensor for station %s", station.standard_name
+        entity = StandaloneLiveboardSensor(coordinator, station)
+        _LOGGER.warning(
+            "Creating standalone liveboard sensor for station %s (entry %s, entity_id will be: %s)",
+            station.standard_name,
+            config_entry.entry_id,
+            entity.unique_id,
         )
-        async_add_entities([StandaloneLiveboardSensor(coordinator, station)])
+        async_add_entities([entity])
         return
 
     # Connection setup (both subentry and legacy)
@@ -181,7 +211,12 @@ async def async_setup_entry(
             ]
         )
 
-    _LOGGER.debug("Adding %d entities to Home Assistant", len(entities))
+    _LOGGER.warning(
+        "Adding %d entities to Home Assistant for entry %s: %s",
+        len(entities),
+        config_entry.entry_id,
+        [type(e).__name__ for e in entities],
+    )
     async_add_entities(entities)
 
 
