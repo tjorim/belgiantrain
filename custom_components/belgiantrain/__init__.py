@@ -614,6 +614,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         # Remove subentry coordinators if it exists
         if "subentry_coordinators" in hass.data[DOMAIN]:
-            hass.data[DOMAIN].pop("subentry_coordinators", None)
+            hass.data[DOMAIN]["subentry_coordinators"].pop(entry.entry_id, None)
 
     return unload_ok

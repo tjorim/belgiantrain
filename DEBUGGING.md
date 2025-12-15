@@ -50,7 +50,7 @@ This shows what data the entry has on restart.
 ## 4. Common Issues & Fixes
 
 ### Issue: Main entry data is empty after restart
-**Cause:** Cleanup removed all keys (lines 492-511 in __init__.py)
+**Cause:** Cleanup removed all keys (lines 424-448 in __init__.py)
 **Expected:** This is normal for HA 2025.2+ - subentries should exist independently
 **Fix:** Verify subentries exist in UI
 
@@ -62,7 +62,7 @@ This shows what data the entry has on restart.
 - Is API reachable?
 
 ### Issue: Sensor setup is skipped
-**Cause:** Logic in sensor.py lines 100-105 skips main entry
+**Cause:** Logic in sensor.py lines 99-103 skips main entry
 **Expected:** Main entry SHOULD be skipped for HA 2025.2+
 **Check:** Are subentries being processed by sensor.py?
 

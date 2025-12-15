@@ -391,7 +391,7 @@ class ConnectionFlowHandler(ConfigSubentryFlow):
             vias = "_excl_vias" if excl_vias else ""
             station_from_id = self.connection_data[CONF_STATION_FROM]
             station_to_id = self.connection_data[CONF_STATION_TO]
-            unique_id = f"connection_{station_from_id}_{station_to_id}{vias}"
+            unique_id = f"nmbs_connection_{station_from_id}_{station_to_id}{vias}"
 
             # Get parent entry directly from context (more efficient)
             main_entry = self.hass.config_entries.async_get_entry(
