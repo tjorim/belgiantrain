@@ -461,8 +461,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                 )
 
                 if subentry.subentry_type == SUBENTRY_TYPE_CONNECTION:
-                    station_from = find_station(hass, subentry.data[CONF_STATION_FROM])
-                    station_to = find_station(hass, subentry.data[CONF_STATION_TO])
+                    station_from = find_station(
+                        hass, subentry.data[CONF_STATION_FROM]
+                    )
+                    station_to = find_station(
+                        hass, subentry.data[CONF_STATION_TO]
+                    )
 
                     if station_from and station_to:
                         coordinator = BelgianTrainDataUpdateCoordinator(
