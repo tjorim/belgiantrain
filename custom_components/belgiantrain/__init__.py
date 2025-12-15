@@ -299,6 +299,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
             CONF_STATION_FROM in entry.data and CONF_STATION_TO in entry.data
         )
 
+        _LOGGER.warning(
+            "Main entry detected: is_legacy=%s, entry.data=%s, "
+            "has_subentries=%d, _ConfigSubentry=%s",
+            is_legacy_connection,
+            entry.data,
+            len(entry.subentries) if hasattr(entry, "subentries") else 0,
+            _ConfigSubentry is not None,
+        )
+
         if not is_legacy_connection:
             # Main integration entry - check for initial data to create first subentry
             if "first_connection" in entry.data:
@@ -469,6 +478,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
             # For HA 2025.2+: Main entry coordinates subentries
             # For HA < 2025.2: Main entry has coordinator and needs platforms
             if _ConfigSubentry is not None:
+                _LOGGER.warning(
+                    "HA 2025.2+ detected - processing subentries from main entry. "
+                    "Subentries available: %d",
+                    len(entry.subentries),
+                )
                 # Clean up initial setup data once subentries are created
                 # This prevents trying to create them again on restarts
                 keys_to_remove = {
@@ -490,8 +504,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                         removed_keys,
                     )
 
-                # Create coordinators for all existing subentries
-                # This is the key: we handle subentries in the main entry, not separately
+                # Create coordinators for all existing subentries (regardless of cleanup)
+                # This runs on both initial setup AND restarts
                 api_client = iRail(session=async_get_clientsession(hass))
                 subentry_coordinators = {}
 
