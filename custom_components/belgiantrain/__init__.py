@@ -6,6 +6,7 @@ import logging
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
+from homeassistant.config_entries import ConfigEntry, ConfigSubentry
 from homeassistant.const import Platform
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -26,8 +27,6 @@ from .coordinator import (
     LiveboardDataUpdateCoordinator,
 )
 from .data import BelgianTrainData
-
-from homeassistant.config_entries import ConfigEntry, ConfigSubentry
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse
@@ -267,7 +266,7 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:  # noqa
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  # noqa: PLR0911, PLR0912, PLR0915
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  # noqa: C901, PLR0911, PLR0912, PLR0915
     """Set up SNCB/NMBS from a config entry."""
     # Ensure station data exists before setting up platforms
     domain_data = hass.data.get(DOMAIN)
@@ -513,7 +512,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                     "Created %d subentry coordinators, forwarding to platforms",
                     len(subentry_coordinators),
                 )
-                # Forward platforms to main entry - sensor platform will handle subentries
+                # Forward platforms to main entry
+                # Sensor platform will handle subentries
                 await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
             else:
                 _LOGGER.info(

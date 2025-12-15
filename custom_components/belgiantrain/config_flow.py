@@ -269,7 +269,7 @@ class ConnectionFlowHandler(ConfigSubentryFlow):
                 main_entry, liveboard_subentry
             )
 
-    async def async_step_user(  # noqa: PLR0911
+    async def async_step_user(  # noqa: PLR0911, PLR0912
         self, user_input: dict[str, Any] | None = None
     ) -> SubentryFlowResult:
         """Handle the step to setup a connection between 2 stations."""

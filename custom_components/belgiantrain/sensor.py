@@ -69,7 +69,7 @@ def get_ride_duration(
     return duration_time + get_delay_in_minutes(delay)
 
 
-async def async_setup_entry(
+async def async_setup_entry(  # noqa: PLR0911, PLR0912, PLR0915
     hass: HomeAssistant,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
@@ -92,17 +92,25 @@ async def async_setup_entry(
         # This is the main entry - process all subentries
         _LOGGER.info("Processing main entry - setting up entities for all subentries")
 
-        subentry_coordinators = hass.data.get(DOMAIN, {}).get("subentry_coordinators", {})
+        subentry_coordinators = (
+            hass.data.get(DOMAIN, {}).get("subentry_coordinators", {})
+        )
 
         if not subentry_coordinators:
-            _LOGGER.warning("No subentry coordinators found - no entities will be created")
+            _LOGGER.warning(
+                "No subentry coordinators found - no entities will be created"
+            )
             return
 
         entities = []
 
         for subentry_id, coordinator in subentry_coordinators.items():
             subentry = next(
-                (s for s in config_entry.subentries.values() if s.subentry_id == subentry_id),
+                (
+                    s
+                    for s in config_entry.subentries.values()
+                    if s.subentry_id == subentry_id
+                ),
                 None,
             )
 
@@ -135,7 +143,12 @@ async def async_setup_entry(
                     excl_vias = subentry.data.get(CONF_EXCLUDE_VIAS, False)
 
                     entity = NMBSSensor(
-                        coordinator, name, show_on_map, station_from, station_to, excl_vias
+                        coordinator,
+                        name,
+                        show_on_map,
+                        station_from,
+                        station_to,
+                        excl_vias,
                     )
                     entities.append(entity)
                     _LOGGER.debug(
@@ -232,7 +245,8 @@ async def async_setup_entry(
         # Create standalone liveboard sensor (enabled by default)
         entity = StandaloneLiveboardSensor(coordinator, station)
         _LOGGER.debug(
-            "Creating standalone liveboard sensor for station %s (entry %s, entity_id will be: %s)",
+            "Creating standalone liveboard sensor for station %s "
+            "(entry %s, entity_id will be: %s)",
             station.standard_name,
             config_entry.entry_id,
             entity.unique_id,
