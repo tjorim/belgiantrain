@@ -82,8 +82,7 @@ def _create_liveboard_entity(
         return StandaloneLiveboardSensor(coordinator, station)
 
     _LOGGER.warning(
-        "Skipping liveboard entity for subentry %s: "
-        "station lookup failed (station=%s)",
+        "Skipping liveboard entity for subentry %s: station lookup failed (station=%s)",
         subentry_id,
         station_id,
     )
@@ -137,14 +136,10 @@ def _setup_main_entry_subentries(
     """Set up entities for all subentries from main entry."""
     _LOGGER.info("Processing main entry - setting up entities for all subentries")
 
-    subentry_coordinators = (
-        hass.data.get(DOMAIN, {}).get("subentry_coordinators", {})
-    )
+    subentry_coordinators = hass.data.get(DOMAIN, {}).get("subentry_coordinators", {})
 
     if not subentry_coordinators:
-        _LOGGER.warning(
-            "No subentry coordinators found - no entities will be created"
-        )
+        _LOGGER.warning("No subentry coordinators found - no entities will be created")
         return
 
     entities = []
@@ -257,9 +252,7 @@ async def async_setup_entry(
     # Fallback to hass.data (legacy)
     if coordinator is None:
         coordinator = (
-            hass.data.get(DOMAIN, {})
-            .get("coordinators", {})
-            .get(config_entry.entry_id)
+            hass.data.get(DOMAIN, {}).get("coordinators", {}).get(config_entry.entry_id)
         )
         if coordinator:
             _LOGGER.debug(

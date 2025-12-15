@@ -485,9 +485,7 @@ async def async_setup_entry(  # noqa: PLR0911, PLR0912, PLR0915
                 # Capture removed keys before modifying entry data
                 removed_keys = keys_to_remove & entry.data.keys()
                 new_data = {
-                    k: v
-                    for k, v in entry.data.items()
-                    if k not in keys_to_remove
+                    k: v for k, v in entry.data.items() if k not in keys_to_remove
                 }
                 hass.config_entries.async_update_entry(entry, data=new_data)
                 _LOGGER.debug(
@@ -512,9 +510,7 @@ async def async_setup_entry(  # noqa: PLR0911, PLR0912, PLR0915
                 # Sensor platform will handle subentries
                 await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
             else:
-                _LOGGER.info(
-                    "No subentries found yet (initial setup or all removed)"
-                )
+                _LOGGER.info("No subentries found yet (initial setup or all removed)")
 
             return True
 

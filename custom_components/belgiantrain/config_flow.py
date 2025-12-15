@@ -265,9 +265,7 @@ class ConnectionFlowHandler(ConfigSubentryFlow):
                 subentry_type=SUBENTRY_TYPE_LIVEBOARD,
                 title=f"Liveboard - {station_name}",
             )
-            self.hass.config_entries.async_add_subentry(
-                main_entry, liveboard_subentry
-            )
+            self.hass.config_entries.async_add_subentry(main_entry, liveboard_subentry)
 
     async def _fetch_stations_if_needed(self) -> SubentryFlowResult | None:
         """Fetch stations from API if not cached.
@@ -435,9 +433,7 @@ class ConnectionFlowHandler(ConfigSubentryFlow):
                 vol.Optional(
                     "add_departure_liveboard", default=False
                 ): BooleanSelector(),
-                vol.Optional(
-                    "add_arrival_liveboard", default=False
-                ): BooleanSelector(),
+                vol.Optional("add_arrival_liveboard", default=False): BooleanSelector(),
             }
         )
 
@@ -449,6 +445,7 @@ class ConnectionFlowHandler(ConfigSubentryFlow):
                 "arrival_station": self.station_to.standard_name,
             },
         )
+
 
 class LiveboardFlowHandler(ConfigSubentryFlow):
     """Handle subentry flow for liveboard sensors."""
