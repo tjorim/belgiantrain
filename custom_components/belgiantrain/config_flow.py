@@ -2,20 +2,20 @@
 
 from __future__ import annotations
 
+from types import MappingProxyType
 from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    ConfigSubentry,
+    ConfigSubentryFlow,
+    SubentryFlowResult,
+)
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-
-# ConfigSubentryFlow is only available in Home Assistant 2025.2+
-try:
-    from homeassistant.config_entries import ConfigSubentryFlow, SubentryFlowResult
-except ImportError:
-    # Fallback for older versions - this won't be used but prevents import errors
-    ConfigSubentryFlow = None  # type: ignore[misc,assignment]
-    SubentryFlowResult = None  # type: ignore[misc,assignment]
 from homeassistant.helpers.selector import (
     BooleanSelector,
     SelectOptionDict,
@@ -112,13 +112,13 @@ class NMBSConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_STATION_FROM): SelectSelector(
                     SelectSelectorConfig(
                         options=choices,
-                        mode=SelectSelectorMode.DROPDOWN,
+                        mode=SelectSelectorMode.LIST,
                     )
                 ),
                 vol.Required(CONF_STATION_TO): SelectSelector(
                     SelectSelectorConfig(
                         options=choices,
-                        mode=SelectSelectorMode.DROPDOWN,
+                        mode=SelectSelectorMode.LIST,
                     )
                 ),
                 vol.Optional(CONF_EXCLUDE_VIAS): BooleanSelector(),
@@ -208,7 +208,7 @@ class NMBSConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_STATION_LIVE): SelectSelector(
                     SelectSelectorConfig(
                         options=choices,
-                        mode=SelectSelectorMode.DROPDOWN,
+                        mode=SelectSelectorMode.LIST,
                     )
                 ),
             }
@@ -220,171 +220,10 @@ class NMBSConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-
-if ConfigSubentryFlow is not None:
-
-    class ConnectionFlowHandler(ConfigSubentryFlow):
-        """Handle subentry flow for connection sensors."""
-
-        async def async_step_user(  # noqa: PLR0911
-            self, user_input: dict[str, Any] | None = None
-        ) -> SubentryFlowResult:
-            """Handle the step to setup a connection between 2 stations."""
-            errors: dict = {}
-
-            if user_input is not None:
-                if user_input[CONF_STATION_FROM] == user_input[CONF_STATION_TO]:
-                    errors["base"] = "same_station"
-                else:
-                    # Fetch stations for validation
-                    try:
-                        api_client = iRail(session=async_get_clientsession(self.hass))
-                        stations_response = await api_client.get_stations()
-                        if stations_response is None:
-                            return self.async_abort(reason="api_unavailable")
-                        stations = stations_response.stations
-                    except CannotConnectError:
-                        return self.async_abort(reason="api_unavailable")
-
-                    station_from = next(
-                        (s for s in stations if s.id == user_input[CONF_STATION_FROM]),
-                        None,
-                    )
-                    station_to = next(
-                        (s for s in stations if s.id == user_input[CONF_STATION_TO]),
-                        None,
-                    )
-
-                    if station_from is None or station_to is None:
-                        errors["base"] = "invalid_station"
-                    else:
-                        # Check if this connection already exists as a subentry
-                        vias = "_excl_vias" if user_input.get(CONF_EXCLUDE_VIAS) else ""
-                        unique_id = (
-                            f"connection_{user_input[CONF_STATION_FROM]}_"
-                            f"{user_input[CONF_STATION_TO]}{vias}"
-                        )
-                        for entry in self.hass.config_entries.async_entries(DOMAIN):
-                            for subentry in entry.subentries.values():
-                                if subentry.unique_id == unique_id:
-                                    return self.async_abort(reason="already_configured")
-
-                        return self.async_create_entry(
-                            title=(
-                                f"Connection: {station_from.standard_name} → "
-                                f"{station_to.standard_name}"
-                            ),
-                            data=user_input,
-                            unique_id=unique_id,
-                        )
-
-            # Fetch station choices
-            try:
-                api_client = iRail(session=async_get_clientsession(self.hass))
-                stations_response = await api_client.get_stations()
-                if stations_response is None:
-                    return self.async_abort(reason="api_unavailable")
-
-                choices = [
-                    SelectOptionDict(value=station.id, label=station.standard_name)
-                    for station in stations_response.stations
-                ]
-            except CannotConnectError:
-                return self.async_abort(reason="api_unavailable")
-
-            schema = vol.Schema(
-                {
-                    vol.Required(CONF_STATION_FROM): SelectSelector(
-                        SelectSelectorConfig(
-                            options=choices,
-                            mode=SelectSelectorMode.DROPDOWN,
-                        )
-                    ),
-                    vol.Required(CONF_STATION_TO): SelectSelector(
-                        SelectSelectorConfig(
-                            options=choices,
-                            mode=SelectSelectorMode.DROPDOWN,
-                        )
-                    ),
-                    vol.Optional(CONF_EXCLUDE_VIAS): BooleanSelector(),
-                    vol.Optional(CONF_SHOW_ON_MAP): BooleanSelector(),
-                }
-            )
-
-            return self.async_show_form(
-                step_id="user",
-                data_schema=schema,
-                errors=errors,
-            )
-
-    class LiveboardFlowHandler(ConfigSubentryFlow):
-        """Handle subentry flow for liveboard sensors."""
-
-        async def async_step_user(
-            self, user_input: dict[str, Any] | None = None
-        ) -> SubentryFlowResult:
-            """Handle the step to setup a liveboard sensor for a station."""
-            errors: dict = {}
-
-            # Fetch stations if not already done
-            if user_input is not None:
-                station_id = user_input[CONF_STATION_LIVE]
-
-                # Check if this station is already configured as a subentry
-                for entry in self.hass.config_entries.async_entries(DOMAIN):
-                    for subentry in entry.subentries.values():
-                        if subentry.unique_id == f"liveboard_{station_id}":
-                            return self.async_abort(reason="already_configured")
-
-                # Get station details for the title
-                stations = self.hass.data.get(DOMAIN, {}).get("stations", [])
-                station = next((s for s in stations if s.id == station_id), None)
-
-                if station is None:
-                    errors["base"] = "invalid_station"
-                else:
-                    return self.async_create_entry(
-                        title=f"Liveboard - {station.standard_name}",
-                        data={CONF_STATION_LIVE: station_id},
-                        unique_id=f"liveboard_{station_id}",
-                    )
-
-            # Fetch station choices
-            try:
-                api_client = iRail(session=async_get_clientsession(self.hass))
-                stations_response = await api_client.get_stations()
-                if stations_response is None:
-                    return self.async_abort(reason="api_unavailable")
-
-                choices = [
-                    SelectOptionDict(value=station.id, label=station.standard_name)
-                    for station in stations_response.stations
-                ]
-            except CannotConnectError:
-                return self.async_abort(reason="api_unavailable")
-
-            schema = vol.Schema(
-                {
-                    vol.Required(CONF_STATION_LIVE): SelectSelector(
-                        SelectSelectorConfig(
-                            options=choices,
-                            mode=SelectSelectorMode.DROPDOWN,
-                        )
-                    ),
-                }
-            )
-
-            return self.async_show_form(
-                step_id="user",
-                data_schema=schema,
-                errors=errors,
-            )
-
-    # Add the method to the class after both handlers are defined
     @classmethod
     @callback
-    def _async_get_supported_subentry_types(
-        _cls: type[NMBSConfigFlow], _config_entry: ConfigEntry
+    def async_get_supported_subentry_types(
+        cls, _config_entry: ConfigEntry
     ) -> dict[str, type[ConfigSubentryFlow]]:
         """Return subentries supported by this handler."""
         return {
@@ -392,15 +231,322 @@ if ConfigSubentryFlow is not None:
             SUBENTRY_TYPE_LIVEBOARD: LiveboardFlowHandler,
         }
 
-    # Dynamically add the method to NMBSConfigFlow
-    NMBSConfigFlow.async_get_supported_subentry_types = (
-        _async_get_supported_subentry_types  # type: ignore[method-assign]
-    )
 
-else:
-    # Fallback classes when ConfigSubentryFlow is not available
-    ConnectionFlowHandler = None  # type: ignore[assignment,misc]
-    LiveboardFlowHandler = None  # type: ignore[assignment,misc]
+class ConnectionFlowHandler(ConfigSubentryFlow):
+    """Handle subentry flow for connection sensors."""
+
+    def __init__(self) -> None:
+        """Initialize."""
+        self.connection_data: dict[str, Any] = {}
+        self.stations: list[StationDetails] = []
+        self.station_from: StationDetails | None = None
+        self.station_to: StationDetails | None = None
+
+    def _create_liveboard_if_needed(
+        self,
+        main_entry: ConfigEntry,
+        station_id: str,
+        station_name: str,
+    ) -> None:
+        """Create a liveboard subentry if it doesn't already exist."""
+        liveboard_unique_id = f"belgiantrain_liveboard_{station_id}"
+
+        # Check if liveboard already exists
+        liveboard_exists = any(
+            sub.unique_id == liveboard_unique_id
+            for sub in main_entry.subentries.values()
+        )
+
+        if not liveboard_exists:
+            liveboard_data = {CONF_STATION_LIVE: station_id}
+            liveboard_subentry = ConfigSubentry(
+                data=MappingProxyType(liveboard_data),
+                unique_id=liveboard_unique_id,
+                subentry_type=SUBENTRY_TYPE_LIVEBOARD,
+                title=f"Liveboard - {station_name}",
+            )
+            self.hass.config_entries.async_add_subentry(main_entry, liveboard_subentry)
+
+    async def _fetch_stations_if_needed(self) -> SubentryFlowResult | None:
+        """Fetch stations from API if not cached.
+
+        Returns abort result on error.
+        """
+        if not self.stations:
+            try:
+                api_client = iRail(session=async_get_clientsession(self.hass))
+                stations_response = await api_client.get_stations()
+                if stations_response is None:
+                    return self.async_abort(reason="api_unavailable")
+                self.stations = stations_response.stations
+            except CannotConnectError:
+                return self.async_abort(reason="api_unavailable")
+        return None
+
+    def _validate_stations(
+        self, user_input: dict[str, Any], errors: dict[str, str]
+    ) -> bool:
+        """Validate station selections. Returns True if valid."""
+        if user_input[CONF_STATION_FROM] == user_input[CONF_STATION_TO]:
+            errors["base"] = "same_station"
+            return False
+
+        station_from_id = user_input[CONF_STATION_FROM]
+        station_to_id = user_input[CONF_STATION_TO]
+        self.station_from = next(
+            (s for s in self.stations if s.id == station_from_id), None
+        )
+        self.station_to = next(
+            (s for s in self.stations if s.id == station_to_id), None
+        )
+
+        if self.station_from is None or self.station_to is None:
+            errors["base"] = "invalid_station"
+            return False
+
+        return True
+
+    def _check_duplicate_connection(
+        self, user_input: dict[str, Any]
+    ) -> SubentryFlowResult | None:
+        """Check if connection already exists. Returns abort result if duplicate."""
+        excl_vias = user_input.get(CONF_EXCLUDE_VIAS)
+        vias = "_excl_vias" if excl_vias else ""
+        station_from_id = user_input[CONF_STATION_FROM]
+        station_to_id = user_input[CONF_STATION_TO]
+        unique_id = f"belgiantrain_connection_{station_from_id}_{station_to_id}{vias}"
+
+        for entry in self.hass.config_entries.async_entries(DOMAIN):
+            for subentry in entry.subentries.values():
+                if subentry.unique_id == unique_id:
+                    return self.async_abort(reason="already_configured")
+        return None
+
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Handle the step to setup a connection between 2 stations."""
+        errors: dict = {}
+
+        if user_input is not None and not self.connection_data:
+            # Fetch stations for validation
+            if abort_result := await self._fetch_stations_if_needed():
+                return abort_result
+
+            # Validate station selections
+            if self._validate_stations(user_input, errors):
+                # Check if this connection already exists
+                if abort_result := self._check_duplicate_connection(user_input):
+                    return abort_result
+
+                # Store connection data and move to liveboard options
+                self.connection_data = user_input
+                return await self.async_step_liveboards()
+
+        # Fetch station choices for the form
+        if abort_result := await self._fetch_stations_if_needed():
+            return abort_result
+
+        choices = [
+            SelectOptionDict(value=station.id, label=station.standard_name)
+            for station in self.stations
+        ]
+
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_STATION_FROM): SelectSelector(
+                    SelectSelectorConfig(
+                        options=choices,
+                        mode=SelectSelectorMode.LIST,
+                    )
+                ),
+                vol.Required(CONF_STATION_TO): SelectSelector(
+                    SelectSelectorConfig(
+                        options=choices,
+                        mode=SelectSelectorMode.LIST,
+                    )
+                ),
+                vol.Optional(CONF_EXCLUDE_VIAS): BooleanSelector(),
+                vol.Optional(CONF_SHOW_ON_MAP): BooleanSelector(),
+            }
+        )
+
+        return self.async_show_form(
+            step_id="user",
+            data_schema=schema,
+            errors=errors,
+        )
+
+    async def async_step_liveboards(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Ask if user wants to add liveboards for stations."""
+        # Add null checks for safety
+        if self.station_from is None or self.station_to is None:
+            return self.async_abort(reason="invalid_state")
+
+        if user_input is not None:
+            # Create the connection subentry
+            excl_vias = self.connection_data.get(CONF_EXCLUDE_VIAS)
+            vias = "_excl_vias" if excl_vias else ""
+            station_from_id = self.connection_data[CONF_STATION_FROM]
+            station_to_id = self.connection_data[CONF_STATION_TO]
+            unique_id = (
+                f"belgiantrain_connection_{station_from_id}_{station_to_id}{vias}"
+            )
+
+            # Get parent entry directly from context (more efficient)
+            main_entry = self.hass.config_entries.async_get_entry(
+                self.context["parent_entry_id"]
+            )
+
+            # Verify parent entry exists (should always exist in subentry flow)
+            if main_entry is None:
+                return self.async_abort(reason="invalid_state")
+
+            # Create liveboard subentries if requested
+            if user_input.get("add_departure_liveboard", False):
+                self._create_liveboard_if_needed(
+                    main_entry,
+                    station_from_id,
+                    self.station_from.standard_name,
+                )
+
+            if user_input.get("add_arrival_liveboard", False):
+                self._create_liveboard_if_needed(
+                    main_entry,
+                    station_to_id,
+                    self.station_to.standard_name,
+                )
+
+            # Create the connection subentry
+            return self.async_create_entry(
+                title=(
+                    f"Connection: {self.station_from.standard_name} → "
+                    f"{self.station_to.standard_name}"
+                ),
+                data=self.connection_data,
+                unique_id=unique_id,
+            )
+
+        # Show form with checkboxes for liveboards
+        schema = vol.Schema(
+            {
+                vol.Optional(
+                    "add_departure_liveboard", default=False
+                ): BooleanSelector(),
+                vol.Optional("add_arrival_liveboard", default=False): BooleanSelector(),
+            }
+        )
+
+        return self.async_show_form(
+            step_id="liveboards",
+            data_schema=schema,
+            description_placeholders={
+                "departure_station": self.station_from.standard_name,
+                "arrival_station": self.station_to.standard_name,
+            },
+        )
+
+
+class LiveboardFlowHandler(ConfigSubentryFlow):
+    """Handle subentry flow for liveboard sensors."""
+
+    def _check_duplicate_liveboard(self, station_id: str) -> SubentryFlowResult | None:
+        """Check if liveboard already exists. Returns abort result if duplicate."""
+        unique_id = f"belgiantrain_liveboard_{station_id}"
+        for entry in self.hass.config_entries.async_entries(DOMAIN):
+            for subentry in entry.subentries.values():
+                if subentry.unique_id == unique_id:
+                    return self.async_abort(reason="already_configured")
+        return None
+
+    async def _get_station_by_id(
+        self, station_id: str
+    ) -> tuple[StationDetails | None, SubentryFlowResult | None]:
+        """Get station details by ID. Returns (station, abort_result)."""
+        stations = self.hass.data.get(DOMAIN, {}).get("stations", [])
+
+        # Fetch stations if not available
+        if not stations:
+            try:
+                api_client = iRail(session=async_get_clientsession(self.hass))
+                stations_response = await api_client.get_stations()
+                if stations_response is None:
+                    return None, self.async_abort(reason="api_unavailable")
+                stations = stations_response.stations
+            except CannotConnectError:
+                return None, self.async_abort(reason="api_unavailable")
+
+        station = next((s for s in stations if s.id == station_id), None)
+        return station, None
+
+    async def _fetch_station_choices(
+        self,
+    ) -> tuple[list[SelectOptionDict] | None, SubentryFlowResult | None]:
+        """Fetch station choices for the form. Returns (choices, abort_result)."""
+        try:
+            api_client = iRail(session=async_get_clientsession(self.hass))
+            stations_response = await api_client.get_stations()
+            if stations_response is None:
+                return None, self.async_abort(reason="api_unavailable")
+        except CannotConnectError:
+            return None, self.async_abort(reason="api_unavailable")
+
+        choices = [
+            SelectOptionDict(value=station.id, label=station.standard_name)
+            for station in stations_response.stations
+        ]
+        return choices, None
+
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Handle the step to setup a liveboard sensor for a station."""
+        errors: dict = {}
+
+        if user_input is not None:
+            station_id = user_input[CONF_STATION_LIVE]
+
+            # Check if this station is already configured as a subentry
+            if abort_result := self._check_duplicate_liveboard(station_id):
+                return abort_result
+
+            # Get station details for the title
+            station, abort_result = await self._get_station_by_id(station_id)
+            if abort_result:
+                return abort_result
+
+            if station is None:
+                errors["base"] = "invalid_station"
+            else:
+                return self.async_create_entry(
+                    title=f"Liveboard - {station.standard_name}",
+                    data={CONF_STATION_LIVE: station_id},
+                    unique_id=f"belgiantrain_liveboard_{station_id}",
+                )
+
+        # Fetch station choices
+        choices, abort_result = await self._fetch_station_choices()
+        if abort_result:
+            return abort_result
+
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_STATION_LIVE): SelectSelector(
+                    SelectSelectorConfig(
+                        options=choices,
+                        mode=SelectSelectorMode.LIST,
+                    )
+                ),
+            }
+        )
+
+        return self.async_show_form(
+            step_id="user",
+            data_schema=schema,
+            errors=errors,
+        )
 
 
 class CannotConnectError(Exception):
