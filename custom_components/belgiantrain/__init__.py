@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from homeassistant.config_entries import ConfigEntry, ConfigSubentry
 from homeassistant.const import Platform
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from pyrail import iRail
 
@@ -582,11 +583,49 @@ async def async_setup_entry(  # noqa: PLR0911, PLR0912, PLR0915
     if station_from is None or station_to is None:
         _LOGGER.warning(
             "Legacy connection entry found but stations not valid. "
-            "Please reconfigure this entry."
+            "Creating repair issue for entry_id=%s",
+            entry.entry_id,
+        )
+        # Create repair issue for invalid legacy entry
+        ir.async_create_issue(
+            hass,
+            DOMAIN,
+            f"migrate_legacy_connection_{entry.entry_id}",
+            is_fixable=True,
+            issue_domain=DOMAIN,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key="migrate_legacy_connection_invalid",
+            translation_placeholders={
+                "entry_title": entry.title,
+            },
         )
         return False
 
-    # Create API client and coordinator for legacy connection
+    # Legacy connection with valid stations - create repair to migrate
+    _LOGGER.info(
+        "Legacy connection entry detected: %s → %s (entry_id=%s). "
+        "Creating repair issue to migrate to new format.",
+        station_from.standard_name,
+        station_to.standard_name,
+        entry.entry_id,
+    )
+
+    # Create repair issue to offer migration
+    ir.async_create_issue(
+        hass,
+        DOMAIN,
+        f"migrate_legacy_connection_{entry.entry_id}",
+        is_fixable=True,
+        issue_domain=DOMAIN,
+        severity=ir.IssueSeverity.WARNING,
+        translation_key="migrate_legacy_connection",
+        translation_placeholders={
+            "station_from": station_from.standard_name,
+            "station_to": station_to.standard_name,
+        },
+    )
+
+    # Continue to set up the legacy entry for now (backward compatibility)
     api_client = iRail(session=async_get_clientsession(hass))
     coordinator = BelgianTrainDataUpdateCoordinator(
         hass, api_client, station_from, station_to, entry
