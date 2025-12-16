@@ -66,6 +66,17 @@ class NMBSConfigFlow(ConfigFlow, domain=DOMAIN):
             for station in self.stations
         ]
 
+    async def async_step_repairs(
+        self, _user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Handle repair flow to create main entry for legacy migration."""
+        # Check if already configured
+        await self.async_set_unique_id(DOMAIN)
+        self._abort_if_unique_id_configured()
+
+        # Create the main entry without going through full setup
+        return self.async_create_entry(title="SNCB/NMBS", data={})
+
     async def async_step_user(
         self, _user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
@@ -112,13 +123,13 @@ class NMBSConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_STATION_FROM): SelectSelector(
                     SelectSelectorConfig(
                         options=choices,
-                        mode=SelectSelectorMode.LIST,
+                        mode=SelectSelectorMode.DROPDOWN,
                     )
                 ),
                 vol.Required(CONF_STATION_TO): SelectSelector(
                     SelectSelectorConfig(
                         options=choices,
-                        mode=SelectSelectorMode.LIST,
+                        mode=SelectSelectorMode.DROPDOWN,
                     )
                 ),
                 vol.Optional(CONF_EXCLUDE_VIAS): BooleanSelector(),
@@ -208,7 +219,7 @@ class NMBSConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_STATION_LIVE): SelectSelector(
                     SelectSelectorConfig(
                         options=choices,
-                        mode=SelectSelectorMode.LIST,
+                        mode=SelectSelectorMode.DROPDOWN,
                     )
                 ),
             }
@@ -357,13 +368,13 @@ class ConnectionFlowHandler(ConfigSubentryFlow):
                 vol.Required(CONF_STATION_FROM): SelectSelector(
                     SelectSelectorConfig(
                         options=choices,
-                        mode=SelectSelectorMode.LIST,
+                        mode=SelectSelectorMode.DROPDOWN,
                     )
                 ),
                 vol.Required(CONF_STATION_TO): SelectSelector(
                     SelectSelectorConfig(
                         options=choices,
-                        mode=SelectSelectorMode.LIST,
+                        mode=SelectSelectorMode.DROPDOWN,
                     )
                 ),
                 vol.Optional(CONF_EXCLUDE_VIAS): BooleanSelector(),
@@ -536,7 +547,7 @@ class LiveboardFlowHandler(ConfigSubentryFlow):
                 vol.Required(CONF_STATION_LIVE): SelectSelector(
                     SelectSelectorConfig(
                         options=choices,
-                        mode=SelectSelectorMode.LIST,
+                        mode=SelectSelectorMode.DROPDOWN,
                     )
                 ),
             }

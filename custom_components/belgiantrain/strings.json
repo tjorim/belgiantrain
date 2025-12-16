@@ -103,5 +103,26 @@
                 "api_unavailable": "The iRail API is currently unavailable. Please try again later."
             }
         }
+    },
+    "issues": {
+        "migrate_legacy_connection": {
+            "title": "Legacy connection entry detected",
+            "description": "Your connection from **{station_from}** to **{station_to}** is using an outdated configuration format.\n\nClick the 'Submit' button below to automatically migrate this connection to the new format. This will:\n- Preserve all your settings (stations, options, etc.)\n- Use the new subentry system for better organization\n- Remove the old configuration entry\n\nYour connection will continue to work normally after the migration.",
+            "fix_flow": {
+                "step": {
+                    "confirm": {
+                        "title": "Migrate legacy connection",
+                        "description": "This will migrate your connection to the new format. The migration is automatic and your settings will be preserved."
+                    }
+                },
+                "error": {
+                    "migration_failed": "Migration failed. Please try again or reconfigure the connection manually."
+                }
+            }
+        },
+        "migrate_legacy_connection_invalid": {
+            "title": "Invalid legacy connection entry detected",
+            "description": "Your connection entry **{entry_title}** is using an outdated configuration format, but the station data is no longer valid.\n\nPlease delete this entry and add the connection again using the current interface."
+        }
     }
 }
