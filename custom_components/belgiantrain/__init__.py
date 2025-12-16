@@ -597,7 +597,7 @@ async def async_setup_entry(  # noqa: PLR0911, PLR0912, PLR0915
             hass,
             DOMAIN,
             f"migrate_legacy_connection_{entry.entry_id}",
-            is_fixable=True,
+            is_fixable=False,
             issue_domain=DOMAIN,
             severity=ir.IssueSeverity.WARNING,
             translation_key="migrate_legacy_connection_invalid",

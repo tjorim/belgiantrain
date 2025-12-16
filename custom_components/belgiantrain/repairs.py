@@ -148,7 +148,8 @@ class MigrateLegacyConnectionRepairFlow(RepairsFlow):
 
         # Check if this connection already exists as a subentry
         subentry_exists = any(
-            sub.unique_id == unique_id for sub in main_entry.subentries.values()
+            sub.unique_id == unique_id
+            for sub in getattr(main_entry, "subentries", {}).values()
         )
         if subentry_exists:
             _LOGGER.info("Connection subentry already exists, removing legacy entry")

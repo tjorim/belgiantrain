@@ -122,18 +122,7 @@
         },
         "migrate_legacy_connection_invalid": {
             "title": "Invalid legacy connection entry detected",
-            "description": "Your connection entry **{entry_title}** is using an outdated configuration format, but the station data is no longer valid.\n\nPlease delete this entry and add the connection again using the current interface.",
-            "fix_flow": {
-                "step": {
-                    "confirm": {
-                        "title": "Remove invalid legacy connection",
-                        "description": "This will remove the invalid legacy connection entry. You will need to add the connection again manually."
-                    }
-                },
-                "error": {
-                    "migration_failed": "Failed to remove the entry. Please try again."
-                }
-            }
+            "description": "Your connection entry **{entry_title}** is using an outdated configuration format, but the station data is no longer valid.\n\nPlease delete this entry and add the connection again using the current interface."
         }
     }
 }
