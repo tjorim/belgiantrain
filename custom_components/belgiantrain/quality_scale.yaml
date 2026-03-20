@@ -1,60 +1,60 @@
 rules:
   # Bronze
-  action-setup: todo
-  appropriate-polling: todo
-  brands: todo
-  common-modules: todo
-  config-flow-test-coverage: todo
-  config-flow: todo
-  dependency-transparency: todo
-  docs-actions: todo
-  docs-high-level-description: todo
-  docs-installation-instructions: todo
-  docs-removal-instructions: todo
-  entity-event-setup: todo
-  entity-unique-id: todo
-  has-entity-name: todo
-  runtime-data: todo
-  test-before-configure: todo
-  test-before-setup: todo
-  unique-config-entry: todo
+  action-setup: done  # Services registered in async_setup (__init__.py)
+  appropriate-polling: done  # 1-minute polling interval set in coordinators
+  brands: exempt  # This is a custom integration, not in Home Assistant core
+  common-modules: done  # Shared logic in coordinator.py, entity.py, const.py, data.py
+  config-flow-test-coverage: done  # Tests in test_config_flow.py
+  config-flow: done  # Full UI config flow implemented
+  dependency-transparency: done  # pyrail dependency documented in manifest.json and README
+  docs-actions: done  # Service actions documented in README
+  docs-high-level-description: done  # High-level description in README
+  docs-installation-instructions: done  # Installation instructions in README (HACS and manual)
+  docs-removal-instructions: done  # Standard HA removal process applies
+  entity-event-setup: exempt  # This integration does not use events
+  entity-unique-id: done  # All entities have unique IDs
+  has-entity-name: done  # BelgianTrainEntity sets _attr_has_entity_name = True
+  runtime-data: done  # Uses entry.runtime_data with BelgianTrainData
+  test-before-configure: done  # API availability tested in config flow
+  test-before-setup: done  # Station data fetched and validated before setup
+  unique-config-entry: done  # Single main entry enforced via unique_id check
 
   # Silver
-  action-exceptions: todo
-  config-entry-unloading: todo
-  docs-configuration-parameters: todo
-  docs-installation-parameters: todo
-  entity-unavailable: todo
-  integration-owner: todo
-  log-when-unavailable: todo
-  parallel-updates: todo
-  reauthentication-flow: todo
-  test-coverage: todo
+  action-exceptions: done  # Service actions handle exceptions and return error info
+  config-entry-unloading: done  # async_unload_entry implemented
+  docs-configuration-parameters: done  # All config parameters documented in README
+  docs-installation-parameters: done  # Installation parameters documented in README
+  entity-unavailable: done  # Entities marked unavailable when coordinator fails (via CoordinatorEntity)
+  integration-owner: done  # @tjorim in manifest codeowners
+  log-when-unavailable: done  # Coordinator logs errors when API is unavailable
+  parallel-updates: todo  # PARALLEL_UPDATES not set in sensor.py
+  reauthentication-flow: exempt  # No authentication required for public iRail API
+  test-coverage: done  # 37 tests across 5 test files covering main functionality
 
   # Gold
-  devices: todo
-  diagnostics: todo
-  discovery-update-info: todo
-  discovery: todo
-  docs-data-update: todo
-  docs-examples: todo
-  docs-known-limitations: todo
-  docs-supported-devices: todo
-  docs-supported-functions: todo
-  docs-troubleshooting: todo
-  docs-use-cases: todo
-  dynamic-devices: todo
-  entity-category: todo
-  entity-device-class: todo
-  entity-disabled-by-default: todo
-  entity-translations: todo
-  exception-translations: todo
-  icon-translations: todo
-  reconfiguration-flow: todo
-  repair-issues: todo
-  stale-devices: todo
+  devices: todo  # Integration does not create device entities
+  diagnostics: done  # Diagnostics implemented in diagnostics.py
+  discovery-update-info: exempt  # No discovery protocol used
+  discovery: exempt  # No discovery protocol used (manual configuration)
+  docs-data-update: todo  # Data update behavior not explicitly documented
+  docs-examples: done  # Service examples in README
+  docs-known-limitations: todo  # Known limitations not documented
+  docs-supported-devices: exempt  # Not a device integration (API-based)
+  docs-supported-functions: done  # Supported functions documented in README
+  docs-troubleshooting: todo  # Troubleshooting section not present
+  docs-use-cases: done  # Use cases mentioned in service documentation
+  dynamic-devices: exempt  # Not a device integration
+  entity-category: todo  # Entity categories not set (e.g., for diagnostic entities)
+  entity-device-class: todo  # SensorDeviceClass.DURATION not set for connection sensors
+  entity-disabled-by-default: done  # Liveboard sensors disabled by default
+  entity-translations: done  # Translations in translations/ directory (en, fr, de, nl)
+  exception-translations: todo  # No exception translations in strings.json
+  icon-translations: todo  # No icon translations in strings.json
+  reconfiguration-flow: todo  # No reconfiguration (options) flow implemented
+  repair-issues: todo  # No repair issues implemented
+  stale-devices: exempt  # Not a device integration
 
   # Platinum
-  async-dependency: todo
-  inject-websession: todo
-  strict-typing: todo
+  async-dependency: done  # pyrail library is async (uses aiohttp)
+  inject-websession: done  # Integration passes async_get_clientsession(hass) to pyrail
+  strict-typing: todo  # Not added to Home Assistant's .strict-typing file; pyrail may not be PEP-561 compliant
