@@ -12,22 +12,6 @@ from custom_components.belgiantrain.coordinator import BelgianTrainDataUpdateCoo
 
 
 @pytest.fixture
-def mock_stations():
-    """Create mock station data."""
-    mock_station_1 = MagicMock()
-    mock_station_1.id = "BE.NMBS.008812005"
-    mock_station_1.standard_name = "Brussels-Central"
-    mock_station_1.name = "Brussels-Central"
-
-    mock_station_2 = MagicMock()
-    mock_station_2.id = "BE.NMBS.008892007"
-    mock_station_2.standard_name = "Ghent-Sint-Pieters"
-    mock_station_2.name = "Ghent-Sint-Pieters"
-
-    return [mock_station_1, mock_station_2]
-
-
-@pytest.fixture
 def mock_api_client():
     """Create a mock API client."""
     return AsyncMock()
