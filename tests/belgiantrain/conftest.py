@@ -19,6 +19,22 @@ def auto_enable_custom_integrations(
 
 
 @pytest.fixture
+def mock_stations() -> list[MagicMock]:
+    """Create mock station data."""
+    mock_station_1 = MagicMock()
+    mock_station_1.id = "BE.NMBS.008812005"
+    mock_station_1.standard_name = "Brussels-Central"
+    mock_station_1.name = "Brussels-Central"
+
+    mock_station_2 = MagicMock()
+    mock_station_2.id = "BE.NMBS.008892007"
+    mock_station_2.standard_name = "Ghent-Sint-Pieters"
+    mock_station_2.name = "Ghent-Sint-Pieters"
+
+    return [mock_station_1, mock_station_2]
+
+
+@pytest.fixture
 async def hass_with_station_data(hass: "HomeAssistant") -> "HomeAssistant":
     """Provide a hass instance with station data preloaded."""
     # Mock the station data in hass.data
